@@ -240,10 +240,10 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   .hero .store.big{display:none}
   .story{display:block;max-width:calc(680px + 2 * var(--gutter))}
   .ch,.ch.hero{height:100vh;min-height:0;max-width:none;justify-content:flex-start;padding:0;scroll-margin-top:0}
-  /* each section's words rest just above the phone */
-  .copy{min-height:calc(var(--pt) - 20px);justify-content:flex-end;padding-top:calc(var(--top-h) + 16px)}
+  /* every heading starts at the same height under the top bar; spare room falls above the phone */
+  .copy{padding-top:calc(var(--top-h) + 20px)}
   /* the words fade out behind the phone; the stage clips the phone at the bottom edge */
-  .stage{position:fixed;z-index:5;inset:calc(var(--pt) - 20px) 0 0;align-self:stretch;width:auto;margin:0;padding-top:20px;overflow:hidden;background:linear-gradient(transparent,var(--bg) 20px);display:flex;justify-content:center}
+  .stage{position:fixed;z-index:5;inset:calc(var(--pt) - 24px) 0 0;align-self:stretch;width:auto;margin:0;padding-top:24px;overflow:hidden;background:linear-gradient(transparent,var(--bg) 24px);display:flex;justify-content:center}
   .frame{width:calc(374px * var(--s))}
   /* the phone runs off the bottom edge: a short list keeps its sum in view, a long one pushes it to the real bottom */
   .device.crop .screen{bottom:calc(var(--cut) + env(safe-area-inset-bottom) / var(--s))}
@@ -898,12 +898,11 @@ function fitPhone() {
   const root = document.documentElement.style;
   let s = Math.min(1, Math.max(.72, (innerHeight - 48) / 760)), view = 760;
   if (stacked()) {
-    // the words take the top, sized for the longest section; the phone takes the width and the rest of the height,
-    // shrinking only when that would leave too little of the list in view
-    root.removeProperty('--pt');
+    // the words take the top, sized for the longest section; the phone takes most of the width and the rest
+    // of the height, shrinking further when that would leave too little of the list in view
     const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
-    const pt = Math.max(...chapters.map(c => c.querySelector('.copy').offsetHeight)) + 20;
-    s = Math.min(1, room / 374, (innerHeight - pt) / 400);
+    const pt = Math.max(...chapters.map(c => c.querySelector('.copy').offsetHeight)) + 32;
+    s = Math.min(1, room * .82 / 374, (innerHeight - pt) / 400);
     view = Math.min(760, (innerHeight - pt) / s);
     root.setProperty('--pt', `${pt}px`);
   }
