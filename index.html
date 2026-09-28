@@ -61,9 +61,9 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 @keyframes bobup{50%{transform:translateY(-3px)}}
 
 
-.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 380px * var(--s));width:calc(374px * var(--s));margin-top:calc(50svh - 64px - 380px * var(--s))}
-.frame{height:calc(760px * var(--s))}
-.device{position:relative;width:374px;height:760px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
+.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 437px * var(--s));width:calc(415px * var(--s));margin-top:calc(50svh - 64px - 437px * var(--s))}
+.frame{height:calc(874px * var(--s))}
+.device{position:relative;width:415px;height:874px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
 .chrome{position:absolute;left:0;right:0;top:0;z-index:6;background:var(--bg)}
 .screen{position:absolute;inset:98px 0 0;display:flex;flex-direction:column;padding:0 20px}
 .pane{flex:1;min-height:0;overflow:hidden}
@@ -244,7 +244,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   .copy{padding-top:calc(var(--top-h) + 20px)}
   /* the words fade out behind the phone; the stage clips the phone at the bottom edge */
   .stage{position:fixed;z-index:5;inset:calc(var(--pt) - 24px) 0 0;align-self:stretch;width:auto;margin:0;padding-top:24px;overflow:hidden;background:linear-gradient(transparent,var(--bg) 24px);display:flex;justify-content:center}
-  .frame{width:calc(374px * var(--s))}
+  .frame{width:calc(415px * var(--s))}
   /* the phone runs off the bottom edge: a short list keeps its sum in view, a long one pushes it to the real bottom */
   .device.crop .screen{bottom:calc(var(--cut) + env(safe-area-inset-bottom) / var(--s))}
   .device.crop.tall .screen{bottom:0}
@@ -831,7 +831,7 @@ const byChapter = [];
 const index = () => FRAMES.forEach((f, i) => (byChapter[f.ch] ??= []).push(i));
 const lastOf = c => byChapter[c].at(-1);
 
-const play = {at: -1, done: -1, token: 0, busy: false};
+const play = {at: -1, token: 0, busy: false};
 
 // where a section's top sits once it has snapped into place
 const snapTop = c => c || stacked() ? 0 : 64;
@@ -845,23 +845,22 @@ function current() {
   return at;
 }
 
-async function playPart(c, lock) {
+async function playPart(c) {
   const token = ++play.token;
-  play.busy = lock; updateNudge();
+  play.busy = true; updateNudge();
   for (const i of byChapter[c]) {
     show(i, i === byChapter[c][0]);
     await sleep(FRAMES[i].w * TICK);
     if (token !== play.token) return;
   }
-  play.busy = false; play.done = Math.max(play.done, c); updateNudge();
+  play.busy = false; updateNudge();
 }
 
 function enter(c) {
   if (c === play.at) return;
   play.at = c; play.token++; play.busy = false;
-  if (calm()) { show(lastOf(c)); play.done = Math.max(play.done, c); }
-  else if (c <= play.done) playPart(c, false);
-  else { play.done = c - 1; playPart(c, true); }
+  if (calm()) show(lastOf(c));
+  else playPart(c);                              // scrolling away stops it; the next section plays its own part
   updateNudge();
 }
 
@@ -874,41 +873,32 @@ function updateNudge() {
 nudge.addEventListener('click', () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'}));
 up.addEventListener('click', () => scrollTo({top: 0, behavior: calm() ? 'auto' : 'smooth'}));
 
-// while a part plays you can look back up, but not move on
 let ticking = false;
 function onScroll() {
   if (ticking) return;
   ticking = true;
   requestAnimationFrame(() => { ticking = false; check(); });
 }
-function check() {
-  if (play.busy && play.at > 0 && scrollY > snapY(play.at) + 2) { scrollTo({top: snapY(play.at), behavior: 'instant'}); return; }
-  if (play.busy && !play.at && scrollY > 2) { scrollTo({top: 0, behavior: 'instant'}); return; }
-  enter(current());
-}
+function check() { enter(current()); }
 addEventListener('scroll', onScroll, {passive: true});
-addEventListener('wheel', e => { if (play.busy && e.deltaY > 0) e.preventDefault(); }, {passive: false});
-let touchY = 0;
-addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, {passive: true});
-addEventListener('touchmove', e => { if (play.busy && e.touches[0].clientY < touchY) e.preventDefault(); }, {passive: false});
-addEventListener('keydown', e => { if (play.busy && ['ArrowDown', 'PageDown', 'End', ' '].includes(e.key)) e.preventDefault(); });
 
 /* ================= fitting the phone ================= */
+const W = 415, H = 874;                          // an iPhone 16: 393 × 852 points of screen in an 11px bezel
 function fitPhone() {
   const root = document.documentElement.style;
-  let s = Math.min(1, Math.max(.72, (innerHeight - 48) / 760)), view = 760;
+  let s = Math.min(1, Math.max(.72, (innerHeight - 48) / H)), view = H;
   if (stacked()) {
     // the words take the top, sized for the longest section; the phone takes most of the width and the rest
     // of the height, shrinking further when that would leave too little of the list in view
     const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
     const pt = Math.max(...chapters.map(c => c.querySelector('.copy').offsetHeight)) + 32;
-    s = Math.min(1, room * .82 / 374, (innerHeight - pt) / 400);
-    view = Math.min(760, (innerHeight - pt) / s);
+    s = Math.min(1, room * .82 / W, (innerHeight - pt) / 440);
+    view = Math.min(H, (innerHeight - pt) / s);
     root.setProperty('--pt', `${pt}px`);
   }
   root.setProperty('--s', s.toFixed(3));
-  stage.style.setProperty('--cut', `${(760 - view).toFixed(1)}px`);
-  device.classList.toggle('crop', view < 760);
+  stage.style.setProperty('--cut', `${(H - view).toFixed(1)}px`);
+  device.classList.toggle('crop', view < H);
 }
 addEventListener('resize', () => { fitPhone(); updateNudge(); onScroll(); });
 
