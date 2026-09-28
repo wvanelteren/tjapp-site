@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tjapp: een boodschappenlijst die zelf rekent</title>
 <meta name="description" content="Schrijf je boodschappen zoals in Notities. Tjapp kiest de producten, vult de hoeveelheden in en zoekt het goedkoopste mandje, bij meerdere supermarkten. Binnenkort in de App Store.">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1C1E'/%3E%3Cpath d='M16 42h32' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 22h18M16 31h14' stroke='%23fff' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M42 22h6M44 31h4' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -16,18 +15,8 @@
   --text:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --ease:cubic-bezier(.32,.72,0,1); --out:cubic-bezier(.16,1,.3,1);
-  --gutter:20px; --row:44px;
-  color-scheme:light dark;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
-  --bg:#000; --grp:#1C1C1E; --cell:#2C2C2E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
-  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6); --warn:#FF9F0A; --on:#636366; --menu:rgba(44,44,46,.97);
-}}
-:root[data-theme="dark"]{
-  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
-  --bg:#000; --grp:#1C1C1E; --cell:#2C2C2E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
-  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6); --warn:#FF9F0A; --on:#636366; --menu:rgba(44,44,46,.97);
+  --gutter:20px; --row:44px; --s:1;
+  color-scheme:light;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
@@ -54,7 +43,6 @@ svg{display:block}
 html{scroll-snap-type:y mandatory}
 .ch{scroll-snap-align:start;scroll-snap-stop:always}
 .ch.hero{scroll-margin-top:64px}
-.fine{scroll-snap-align:end}
 .copy{display:flex;flex-direction:column}
 h1{font:700 clamp(40px,4.3vw,56px)/1.06 var(--display);letter-spacing:-.022em;text-wrap:balance}
 h1 span,h2 span{color:var(--l2)}
@@ -63,17 +51,22 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .ch p b{color:var(--label);font-weight:600}
 .ch p q{color:var(--label);quotes:"‘" "’"}
 .hero .store.big{margin-top:32px;align-self:flex-start}
-.nudge{position:fixed;z-index:10;left:max(var(--gutter),calc((100vw - 1120px)/2));bottom:calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 20px;border-radius:22px;background:var(--label);color:var(--bg);box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:16px;font-weight:600;letter-spacing:-.3px;transition:opacity .3s,transform .3s var(--ease)}
-.nudge svg{width:18px;height:18px;animation:bob 1.6s ease-in-out infinite}
-.nudge.gone{opacity:0;transform:translateY(8px);pointer-events:none}
+.pill{display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 20px;border-radius:22px;background:var(--label);color:var(--bg);box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:16px;font-weight:600;letter-spacing:-.3px;transition:opacity .3s,transform .3s var(--ease)}
+.pill svg{width:18px;height:18px;animation:bob 1.6s ease-in-out infinite}
+.pill.gone{opacity:0;transform:translateY(8px);pointer-events:none}
+.nudge{position:fixed;z-index:10;left:max(var(--gutter),calc((100vw - 1120px)/2));bottom:calc(24px + env(safe-area-inset-bottom))}
+.up{align-self:flex-start;margin-top:32px}
+.up svg{animation-name:bobup}
 @keyframes bob{50%{transform:translateY(3px)}}
+@keyframes bobup{50%{transform:translateY(-3px)}}
 
-.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 380px * var(--s));--s:1;width:calc(374px * var(--s));margin-top:calc(50svh - 64px - 380px * var(--s))}
+
+.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 380px * var(--s));width:calc(374px * var(--s));margin-top:calc(50svh - 64px - 380px * var(--s))}
 .frame{height:calc(760px * var(--s))}
 .device{position:relative;width:374px;height:760px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
 .chrome{position:absolute;left:0;right:0;top:0;z-index:6;background:var(--bg)}
-.screen{position:absolute;inset:98px 0 0;overflow:hidden;scrollbar-width:none;padding:0 20px}
-.screen::-webkit-scrollbar{display:none}
+.screen{position:absolute;inset:98px 0 0;display:flex;flex-direction:column;padding:0 20px}
+.pane{flex:1;min-height:0;overflow:hidden}
 .status{display:flex;justify-content:space-between;align-items:center;height:54px;padding:6px 30px 0 34px;font:600 16px/1 var(--text);letter-spacing:-.3px}
 .island{position:absolute;left:50%;top:10px;width:112px;height:32px;margin-left:-56px;border-radius:18px;background:#000}
 .status .ic{display:flex;gap:5px;align-items:center}
@@ -89,7 +82,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .circle.on{background:var(--label);color:var(--bg)}
 
 /* ---------- the note ---------- */
-.note{position:relative;min-height:100%;display:flex;flex-direction:column}
+.note{position:relative}
 .ntitle{display:block;width:100%;text-align:left;font:700 28px/34px var(--display);letter-spacing:.36px;padding:4px 0 6px;border-radius:8px;white-space:nowrap}
 .ntitle span{color:var(--l3)}
 .ntitle svg{display:inline-block;width:18px;height:18px;color:var(--l3);vertical-align:-1px;margin-left:4px}
@@ -150,13 +143,15 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .entry.typing .tx::after{animation:none}
 @keyframes blink{50%{opacity:0}}
 
-.sum{position:sticky;bottom:0;z-index:4;margin-top:auto;background:var(--bg);padding:10px 0 30px}
+.sum{position:relative;flex:none;background:var(--bg);padding:10px 0 30px}
 .sum::before{content:"";display:block;height:1.5px;background:var(--label);margin-right:20px}
 .sum .plus{position:absolute;right:0;top:0;font-size:17px;font-weight:500;line-height:22px;background:var(--bg);padding-left:4px}
 .sum .row{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px}
 .sum .row>span:first-child{font-weight:600}
 .sum .t{font:700 22px/28px var(--display);letter-spacing:.35px;font-variant-numeric:tabular-nums}
 .sum.busy .t{color:var(--l3);transition:color .2s}
+.sum .left{position:absolute;right:0;bottom:9px;font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);font-variant-numeric:tabular-nums;transition:opacity .3s}
+.sum .left:empty{opacity:0}
 
 /* ---------- goal menu ---------- */
 .menu{position:absolute;left:20px;top:176px;z-index:9;width:262px;border-radius:14px;background:var(--menu);box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px var(--sep);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;transform-origin:18% 0;transform:scale(.6);opacity:0;pointer-events:none;transition:transform .32s var(--ease),opacity .2s}
@@ -176,64 +171,92 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .note.shop .prods{display:block}
 .note.shop #lines,.note.shop .entry{display:none}
 .pv-st{display:grid;grid-template-columns:1fr auto;align-items:baseline;row-gap:1px;padding:18px 0 8px;font-size:20px;line-height:25px;font-weight:600;letter-spacing:.38px}
-.pv-st:first-child{padding-top:4px}
+.pv-store:first-child .pv-st{padding-top:4px}
 .pv-st .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0}
 .pv-st.lose .v{color:var(--l2)}
 .pv-sn{display:flex;align-items:center;gap:6px}
 .pv-sn svg{width:15px;height:15px;color:var(--l3)}
-.pv-st[data-open="false"] .pv-sn svg{transform:rotate(-90deg)}
-.pv-st[data-open="false"]{border-bottom:.5px solid var(--sep);padding-bottom:12px}
+.pv-sn svg{transition:transform .35s var(--ease)}
+.pv-store[data-open="false"] .pv-sn svg{transform:rotate(-90deg)}
+.pv-store[data-open="false"] .pv-st{border-bottom:.5px solid var(--sep);padding-bottom:12px}
+.pv-st{transition:opacity .15s}
+.pv-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s var(--ease)}
+.pv-body>div{min-height:0;overflow:hidden}
+.pv-store[data-open="false"] .pv-body{grid-template-rows:0fr}
 .pv-ss{grid-column:1/-1;font-size:13px;line-height:18px;font-weight:400;letter-spacing:-.08px;color:var(--l2)}
 .pv-sh{font-size:13px;line-height:18px;font-weight:600;color:var(--l2);padding:12px 0 0}
 .pv-row{display:flex;align-items:center;gap:12px;min-height:62px;padding:7px 0}
 .pv-img{flex:none;width:48px;height:48px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 .5px var(--sep);overflow:hidden;display:grid;place-items:center}
 .pv-img img{width:100%;height:100%;object-fit:contain}
+.pv-img.none{background:var(--grp);box-shadow:none;color:var(--l3)}
+.pv-img.none svg{width:22px;height:22px}
 .pv-n{flex:1;min-width:0}
 .pv-n .nm2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pv-n small{display:block;font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pv-row .pr{min-width:0}
-.prods.enter .pv-row,.prods.enter .pv-st,.prods.enter .pv-sh{animation:rowin .42s var(--out) both;animation-delay:calc(var(--i,0) * 35ms)}
-.prods.enter .pv-img{animation:pop .5s cubic-bezier(.34,1.3,.5,1) both;animation-delay:calc(120ms + var(--i,0) * 35ms)}
+.prods.enter .pv-row,.prods.enter .pv-st,.prods.enter .pv-sh,.pv-store.enter .pv-row,.pv-store.enter .pv-sh{animation:rowin .42s var(--out) both;animation-delay:calc(var(--i,0) * 35ms)}
+.prods.enter .pv-img,.pv-store.enter .pv-img{animation:pop .5s cubic-bezier(.34,1.3,.5,1) both;animation-delay:calc(120ms + var(--i,0) * 35ms)}
 @keyframes pop{from{opacity:0;transform:scale(.3)}}
 .pv-row.swap .pv-img,.pv-row.swap .nm2{animation:fadein .5s ease-out both}
 .pv-row.swap .pr .v{animation:flash 1.6s ease-out both}
 .seg i{transition:transform .15s,background .25s}
 .seg i.tap{transform:scale(.86)}
-.ntitle{transition:opacity .15s}
-.ntitle.tap{opacity:.45}
+.ntitle,.rt{transition:opacity .15s}
+.tap:not(.seg i){opacity:.45}
 
-/* ---------- close ---------- */
-.close{max-width:calc(1120px + 2 * var(--gutter));margin:48px auto 0;padding:0 var(--gutter) 28px}
-.close .rule{position:relative;height:1.5px;background:var(--label);margin-right:26px}
-.close .rule::after{content:"+";position:absolute;right:-26px;top:-13px;font:500 24px/24px var(--text)}
-.close .row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:16px;flex-wrap:wrap}
-.close .name{font:700 40px/1 var(--display);letter-spacing:-.02em}
-.fine{max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:36px var(--gutter) calc(40px + env(safe-area-inset-bottom));font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--read)}
-.fine p+p{margin-top:4px}
+/* a part starts where the story is, without animating there */
+.device.cut *{transition:none !important}
 
-/* ---------- stacked: phone pinned on top, chapters scroll under it ---------- */
+/* ---------- the recipe page, pushed over the list ---------- */
+.screen{transition:transform .45s var(--ease),opacity .45s,bottom .5s var(--ease)}
+.device.pushed .screen{transform:translateX(-28%);opacity:.6}
+.seg,#filt{transition:opacity .3s}
+.device.pushed #filt{opacity:0}
+.rpage{position:absolute;inset:98px 0 0;z-index:5;display:flex;flex-direction:column;padding:0 20px;background:var(--bg);box-shadow:-10px 0 30px rgba(0,0,0,.08);transform:translateX(calc(100% + 40px));transition:transform .45s var(--ease)}
+.rpage.open{transform:none}
+.rp-t{font:700 28px/34px var(--display);letter-spacing:.36px;padding:4px 0 2px;text-wrap:balance}
+.rp .rby{padding-top:4px}
+.rp-m{margin-top:10px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2)}
+.rp-m b{color:var(--label);font-weight:600}
+.rp .pv-sh{padding-top:14px}
+.mac{display:grid;grid-template-columns:repeat(4,1fr);padding:12px 0 2px}
+.mac div{display:flex;flex-direction:column}
+.mac b{font:700 22px/28px var(--display);letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.mac span{font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2)}
+.mcap{font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);padding:6px 0 12px;border-bottom:.5px solid var(--sep)}
+/* the recipe page opens on its list; the bag shows the products */
+.rp-prods,#rpage.shop .rp-list{display:none}
+#rpage.shop .rp-prods{display:block}
+#rpage.enter .rp-prods .pv-row{animation:rowin .42s var(--out) both;animation-delay:calc(var(--i,0) * 35ms)}
+#rpage.enter .rp-prods .pv-img{animation:pop .5s cubic-bezier(.34,1.3,.5,1) both;animation-delay:calc(120ms + var(--i,0) * 35ms)}
+.rpage .sum::before{margin-right:0}
+
+/* ---------- stacked: the words change above, the phone fills the width and runs off the bottom ---------- */
 @media (max-width:900px){
+  :root{--top-h:64px}
+  .top{position:fixed;inset:0 0 auto;z-index:8;height:var(--top-h);background:var(--bg)}
+  .top::after{content:"";position:absolute;inset:100% 0 auto;height:16px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
   .top .store{visibility:visible}
   .hero .store.big{display:none}
-  .story{grid-template-columns:1fr;max-width:calc(680px + 2 * var(--gutter))}
-  .ch{grid-column:1;min-height:auto;max-width:none;padding:28px 0 0;justify-content:flex-start}
-  .ch:not(.hero){height:calc(100svh - var(--park,60svh));min-height:0;scroll-margin-top:var(--park,60svh)}
-  .ch.hero{scroll-snap-align:none}
-  .top{scroll-snap-align:start}
-  .ch.hero{min-height:auto;padding:20px 0 24px}
-  .nudge{left:50%;transform:translateX(-50%)}
-  .nudge.gone{transform:translate(-50%,8px)}
-  .stage{grid-column:1;grid-row:auto;position:sticky;top:0;z-index:5;width:auto;margin:0 calc(-1 * var(--gutter));padding:8px 0 10px;background:var(--bg);display:flex;justify-content:center}
+  .story{display:block;max-width:calc(680px + 2 * var(--gutter))}
+  .ch,.ch.hero{height:100vh;min-height:0;max-width:none;justify-content:flex-start;padding:0;scroll-margin-top:0}
+  /* each section's words rest just above the phone */
+  .copy{min-height:calc(var(--pt) - 20px);justify-content:flex-end;padding-top:calc(var(--top-h) + 16px)}
+  /* the words fade out behind the phone; the stage clips the phone at the bottom edge */
+  .stage{position:fixed;z-index:5;inset:calc(var(--pt) - 20px) 0 0;align-self:stretch;width:auto;margin:0;padding-top:20px;overflow:hidden;background:linear-gradient(transparent,var(--bg) 20px);display:flex;justify-content:center}
   .frame{width:calc(374px * var(--s))}
-  .close,.fine{max-width:calc(680px + 2 * var(--gutter))}
+  /* the phone runs off the bottom edge: a short list keeps its sum in view, a long one pushes it to the real bottom */
+  .device.crop .screen{bottom:calc(var(--cut) + env(safe-area-inset-bottom) / var(--s))}
+  .device.crop.tall .screen{bottom:0}
+  .device.crop.tall .note{padding-bottom:max(0px,calc(var(--cut) - 80px))}   /* so the newest line can still scroll into view */
+  /* no scroll hint here: it would sit on the phone */
+  .pill.nudge,.pill.up{display:none}
 }
 @media (max-width:600px){
-  :root{--gutter:16px}
-  .top{height:56px}
+  :root{--gutter:16px;--top-h:56px}
   h1{font-size:34px;line-height:38px;letter-spacing:-.02em}
   h2{font-size:28px}
   .lede,.ch p{font-size:17px;line-height:24px;margin-top:10px}
-  .close .name{font-size:34px}
   .top .store{font-size:13px;padding:0 11px;height:30px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -250,9 +273,11 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 
 <main class="story">
   <section class="ch hero" data-scene="0" aria-labelledby="kop">
-    <h1 id="kop">Een boodschappenlijst <span>die zelf rekent.</span></h1>
-    <p class="lede">Schrijf je lijst zoals in Notities. Tjapp kiest bij elke regel het juiste product, vult de hoeveelheid in en zoekt het goedkoopste mandje, bij meerdere supermarkten.</p>
-    <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+    <div class="copy">
+      <h1 id="kop">Een boodschappenlijst <span>die zelf rekent.</span></h1>
+      <p class="lede">Schrijf je lijst zoals in Notities. Tjapp kiest bij elke regel het juiste product, vult de hoeveelheid in en zoekt het goedkoopste mandje, bij meerdere supermarkten.</p>
+      <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+    </div>
   </section>
 
   <div class="stage" role="img" aria-label="Voorbeeld van de app, dat meespeelt terwijl je scrolt">
@@ -270,13 +295,13 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
         </div>
       </div>
       <div class="screen">
-        <div class="note" id="note" role="group" aria-label="Voorbeeld: een boodschappenlijst die je zelf kunt aanpassen">
+        <div class="pane" id="pane"><div class="note" id="note" role="group" aria-label="Voorbeeld: een boodschappenlijst die je zelf kunt aanpassen">
           <button class="ntitle" id="goalbtn" type="button" aria-haspopup="menu" aria-expanded="false"><b id="goalw">Goedkoopste</b> <span>mandje</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg></button>
           <div class="lines" id="lines"></div>
           <div class="prods" id="prods"></div>
           <div class="entry" id="entry"><span class="tx" id="entrytx"></span></div>
-          <div class="sum" id="sum"><span class="plus" aria-hidden="true">+</span><div class="row"><span>Totaal</span><span class="t" id="total" aria-live="off">€ 0,00</span></div></div>
-        </div>
+        </div></div>
+        <div class="sum" id="sum"><span class="plus" aria-hidden="true">+</span><div class="row"><span>Totaal</span><span class="t" id="total" aria-live="off">€ 0,00</span></div><div class="left" id="left"></div></div>
       </div>
 
       <div class="menu" id="menu" role="menu" aria-label="Doel">
@@ -284,6 +309,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
         <button class="mi" role="menuitemradio" data-goal="bewerkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Minder bewerkt</b><small>Minder additieven, meer biologisch</small></button>
         <button class="mi" role="menuitemradio" disabled><svg viewBox="0 0 24 24"></svg><b>Gezondst</b><small>Binnenkort</small></button>
       </div>
+      <div class="rpage" id="rpage"></div>
 
     </div></div>
   </div>
@@ -295,30 +321,18 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 
   <section class="ch" data-scene="2" aria-labelledby="h-zin"><div class="copy">
     <h2 id="h-zin">Typ waar je zin in hebt.</h2>
-    <p>Typ <q>recept met veel kip</q> en Tjapp zet een recept van een echte receptenmaker in je lijst. Elk ingrediënt krijgt meteen een prijs.</p>
+    <p>Typ <q>kip gerecht met veel proteïne</q> en Tjapp zet een recept van een echte receptenmaker in je lijst. Tik erop en je ziet per ingrediënt welk product het wordt en wat je ervan gebruikt.</p>
   </div></section>
 
   <section class="ch" data-scene="3" aria-labelledby="h-winkels"><div class="copy">
     <h2 id="h-winkels">Eén lijst, <span>elke supermarkt.</span></h2>
-    <p>Tik op het tasje en je lijst wordt een mandje met echte producten. Tjapp rekent het uit bij meerdere supermarkten en zet de goedkoopste bovenaan.</p>
+    <p>Tik op het tasje en je lijst wordt een mandje met echte producten. Tjapp rekent het uit bij meerdere supermarkten en zet de goedkoopste bovenaan. Tik op een supermarkt om zijn mandje te zien.</p>
+    <button class="pill up gone" id="up" type="button">Scroll naar boven<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
   </div></section>
 </main>
 
-<button class="nudge gone" id="nudge" type="button">Scroll en kijk mee<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+<button class="pill nudge gone" id="nudge" type="button">Scroll en kijk mee<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
 
-<section class="close" aria-label="Beschikbaarheid">
-  <div class="rule" aria-hidden="true"></div>
-  <div class="row">
-    <span class="name">Tjapp</span>
-    <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
-  </div>
-</section>
-
-<footer class="fine">
-  <p>Het voorbeeld gebruikt echte producten, foto’s en prijzen van Albert Heijn (september 2026) voor een klein deel van het assortiment. De Jumbo-prijzen zijn verzonnen. ‘Minder bewerkt’ kiest in dit voorbeeld biologisch waar dat kan.</p>
-  <p>Het recept is van <a class="lnk" href="https://www.instagram.com/chefkeluc/" rel="noopener" target="_blank">@chefkeluc</a>.</p>
-  <p>© 2026 Tjapp · tjapp.app</p>
-</footer>
 
 <script src="demo-data.js"></script>
 <script>
@@ -332,6 +346,7 @@ const ICON = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>',
   bookShut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 18.5v-13a2 2 0 0 1 2-2h11v13h-11a2 2 0 0 0 0 4h11"/><path d="M9.5 7.5h5"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  pack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8" stroke-linecap="round"/></svg>',
   ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8M9 8h7v7"/></svg>',
 };
 const recipe = id => RECIPES.find(r => r.id === id);
@@ -406,8 +421,8 @@ function scaleText(text, f) {
 function hash(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 9973; return h; }
 // Jumbo has no data yet: its prices are made up from Albert Heijn's, per food (the page says so)
 function jumbo(p, food) {
-  const f = .9 + hash(food) % 100 / 100 * .24;
-  return {...p, n: p.n.replace(/^AH /, 'Jumbo '), p: Math.max(.29, Math.round(p.p * f * 10) / 10 - .01)};
+  const f = .9 + hash(food) % 100 / 100 * .24, own = p.n.startsWith('AH ');
+  return {...p, n: own ? 'Jumbo ' + p.n.slice(3) : p.n, img: own ? null : p.img, p: Math.max(.29, Math.round(p.p * f * 10) / 10 - .01)};
 }
 function pool(food, store) {
   const F = FOODS[food];
@@ -447,7 +462,8 @@ function resolve(l) {
   l.status = p.food ? 'done' : 'missing';
 }
 
-// one basket per supermarket with the whole list, cheapest first; the list shows the cheapest
+// one basket per supermarket with the whole list, cheapest first; the list shows the cheapest,
+// and each line costs what it uses of the packs bought: leftovers are not charged to a recipe
 function solve() {
   const byFood = {};
   for (const l of allItems()) if (l.status === 'done') (byFood[l.res.food] ??= []).push(l);
@@ -459,12 +475,13 @@ function solve() {
       const p = pool(food, bk.st), b = bestIn(p.ps, need);
       if (!b) continue;
       bk.total += b.cost;
-      bk.buys.push({food, cost: b.cost, need, tag: p.tag, fors, items: p.ps.map((x, j) => ({...x, c: b.counts[j]})).filter(x => x.c)});
+      const items = p.ps.map((x, j) => ({...x, c: b.counts[j]})).filter(x => x.c);
+      bk.buys.push({food, cost: b.cost, need, got: items.reduce((s, x) => s + x.c * x.s, 0), tag: p.tag, fors, items});
     }
   }
   baskets.sort((a, b) => a.total - b.total);
   for (const buy of baskets[0].buys)
-    for (const l of byFood[buy.food]) Object.assign(l, {share: Math.round(buy.cost * l.res.need / buy.need * 100) / 100, tag: buy.tag});
+    for (const l of byFood[buy.food]) Object.assign(l, {share: Math.round(buy.cost * l.res.need / buy.got * 100) / 100, tag: buy.tag});
   Object.assign(M, {total: baskets[0].total, baskets});
 }
 
@@ -484,7 +501,7 @@ function recompute() {
 /* ================= the timeline: every state the phone passes through ================= */
 // Each frame is a full copy of the list, the baskets and the goal, with a weight: how long it lasts.
 const FRAMES = [];
-const ui = {menu: false, hot: null, view: 'list', tap: null, scroll: 'top'};
+const ui = {menu: false, hot: null, view: 'list', page: null, pageView: 'list', open: ['ah', 'jumbo'], tap: null, scroll: 'top', tall: false};
 let chapter = 0, typed = '';
 
 const copyLine = l => ({...l, res: l.res && {...l.res}});
@@ -506,6 +523,7 @@ function build() {
   // 0 · landing: three lines written, the rest is typed in front of you
   M.entries = ['melk', '6 eieren', 'bananen'].map(t => item(t));
   recompute(); typed = 'komkom';
+  ui.scroll = 'end';                             // a cropped phone keeps the line being typed in view
   hold(1); typeIn('mer', .45); hold(.8);
   const cucumber = commit(); hold(2.5);
   land(cucumber); hold(1);
@@ -514,34 +532,37 @@ function build() {
   land(avocado); hold(1.5);
 
   // 1 · another goal: the same list, other products
-  chapter = 1;
+  chapter = 1; ui.scroll = 'top';
   hold(1.5); tap('title'); ui.menu = true; hold(4);
   ui.hot = 'bewerkt'; hold(2);
   S.goal = 'bewerkt'; recompute(); ui.hot = null; ui.menu = false; hold(8);
 
-  // 2 · a recipe from a few words
+  // 2 · a recipe from a few words, on the cheapest goal again
   chapter = 2;
-  hold(.5); typeIn('recept met veeeeel k', .12); typeIn('ip', .45); hold(.8);
-  const ask = commit(); ui.scroll = 'end'; hold(2);
+  S.goal = 'goedkoopst'; recompute(); ui.scroll = 'end';
+  hold(.5); typeIn('kip gerecht met veeeeel prote', .1); typeIn('ine :)', .4); hold(.8);
+  const ask = commit(); hold(2);
   const rec = makeRecipe(recipe('chefkeluc-124'));
   M.entries.splice(M.entries.indexOf(ask), 1, rec);
+  ui.tall = true;                                // from here the list outgrows a cropped phone, so its sum sinks out of view
   rec.lines.forEach(l => { l.status = 'busy'; });
   recompute(); hold(1.2);
   for (const l of rec.lines) { land(l); hold(.3); }
-  hold(3);
-  rec.open = false; ui.scroll = 'top'; hold(1.5);
+  hold(4);
+  rec.open = false; ui.scroll = 'top'; hold(2);
+  tap('rec'); ui.page = 'recipe'; hold(5);
+  tap('bag'); ui.pageView = 'products'; hold(6);
 
-  // 3 · the products, per supermarket
+  // 3 · the products, per supermarket: every basket open, then Albert Heijn folds
   chapter = 3;
-  hold(1); tap('bag');
-  ui.view = 'products'; hold(5);
-  ui.scroll = 'end'; hold(6);
-  ui.scroll = 'top'; hold(2);
+  ui.page = null; ui.pageView = 'list'; hold(1.5);
+  tap('bag'); ui.view = 'products'; hold(8);
+  tap('ah'); ui.open = ['jumbo']; hold(8);
 }
 
 /* ================= rendering ================= */
 const els = new Map();
-const linesEl = $('#lines'), entryEl = $('#entry'), entryTx = $('#entrytx'), totalEl = $('#total'), sumEl = $('#sum'), screen = $('.screen');
+const linesEl = $('#lines'), entryEl = $('#entry'), entryTx = $('#entrytx'), totalEl = $('#total'), sumEl = $('#sum'), pane = $('#pane');
 const note = $('#note'), prodsEl = $('#prods');
 let animate = false;                             // off for the very first paint
 
@@ -617,6 +638,9 @@ function render() {
   while (linesEl.children.length > want.length) linesEl.lastElementChild.remove();
   for (const [id, el] of els) if (!el.isConnected) els.delete(id);
   sumEl.classList.toggle('busy', busy());
+  // lines cost what they use; the total is what you pay, so the difference is what you keep
+  const left = M.total - allItems().reduce((s, l) => s + (l.status === 'done' ? l.share || 0 : 0), 0);
+  $('#left').textContent = !busy() && left >= .05 ? `waarvan ${eur(left)} aan restjes` : '';
   $('#goalw').textContent = GOAL_WORD[S.goal];
   fitTitle();
   countTo(M.total);
@@ -628,26 +652,30 @@ const qty = (s, u) => u === 'g' ? (s >= 1000 ? `${s / 1000} kg` : `${s} g`).repl
   : u === 'ml' ? (s >= 1000 ? `${s / 1000} l` : `${s} ml`).replace('.', ',') : `${s} st`;
 let shownNames = {};
 
+const rowHTML = (key, i, it, sub, price) => `<div class="pv-row" data-key="${key}" style="--i:${i}">${it?.img
+  ? `<span class="pv-img"><img src="${esc(it.img)}" alt=""></span>` : `<span class="pv-img none">${ICON.pack}</span>`}<span class="pv-n"><span class="nm2">${esc(it?.n ?? '')}</span><small>${esc(sub)}</small></span><span class="pr"><span class="v">${eur(price)}</span></span></div>`;
+
+function basketHTML(bk) {
+  const groups = {};
+  for (const b of bk.buys) (groups[SHELF[b.food] || 'Overig'] ??= []).push(b);
+  const at = r => (i => i < 0 ? 99 : i)(AISLE.indexOf(r));
+  let h = '', i = 0;
+  for (const shelf of Object.keys(groups).sort((a, b) => at(a) - at(b))) {
+    h += `<div class="pv-sh" style="--i:${i}">${shelf}</div>`;
+    for (const b of groups[shelf]) {
+      const u = FOODS[b.food].u, packs = b.items.map(x => `${x.c > 1 ? x.c + ' × ' : ''}${qty(x.s, u)}`).join(' + ');
+      h += rowHTML(`${bk.st}:${b.food}`, i++, b.items[0], `${packs} · ${b.fors}`, b.cost);
+    }
+  }
+  return h;
+}
+
 function productsHTML() {
   const [win] = M.baskets;
   return M.baskets.map((bk, k) => {
     const n = `${bk.buys.length} producten`;
     const sub = k ? `${eur(bk.total - win.total)} duurder · ${n}` : `Goedkoopst · ${n}`;
-    let h = `<div class="pv-st${k ? ' lose' : ''}" data-open="${!k}"><span class="pv-sn">${STORE_NAME[bk.st]}${ICON.chev}</span><span class="v">${eur(bk.total)}</span><small class="pv-ss">${sub}</small></div>`;
-    if (k) return h;
-    const groups = {};
-    for (const b of bk.buys) (groups[SHELF[b.food] || 'Overig'] ??= []).push(b);
-    const at = r => (i => i < 0 ? 99 : i)(AISLE.indexOf(r));
-    let i = 0;
-    for (const shelf of Object.keys(groups).sort((a, b) => at(a) - at(b))) {
-      h += `<div class="pv-sh">${shelf}</div>`;
-      for (const b of groups[shelf]) {
-        const it = b.items[0], u = FOODS[b.food].u;
-        const packs = b.items.map(x => `${x.c > 1 ? x.c + ' × ' : ''}${qty(x.s, u)}`).join(' + ');
-        h += `<div class="pv-row" data-food="${b.food}" style="--i:${i++}"><span class="pv-img">${it.img ? `<img src="${esc(it.img)}" alt="">` : ''}</span><span class="pv-n"><span class="nm2">${esc(it.n)}</span><small>${packs} · ${esc(b.fors)}</small></span><span class="pr"><span class="v">${eur(b.cost)}</span></span></div>`;
-      }
-    }
-    return h;
+    return `<div class="pv-store" data-st="${bk.st}"><div class="pv-st${k ? ' lose' : ''}"><span class="pv-sn">${STORE_NAME[bk.st]}${ICON.chev}</span><span class="v">${eur(bk.total)}</span><small class="pv-ss">${sub}</small></div><div class="pv-body"><div>${basketHTML(bk)}</div></div></div>`;
   }).join('');
 }
 
@@ -658,25 +686,78 @@ function renderProducts() {
   // products that changed (another goal) swap in visibly
   const names = {};
   for (const row of prodsEl.querySelectorAll('.pv-row')) {
-    const nm = row.querySelector('.nm2').textContent;
-    names[row.dataset.food] = nm;
-    if (animate && shownNames[row.dataset.food] && shownNames[row.dataset.food] !== nm) row.classList.add('swap');
+    const k = row.dataset.key, nm = row.querySelector('.nm2').textContent;
+    names[k] = nm;
+    if (animate && shownNames[k] && shownNames[k] !== nm) row.classList.add('swap');
   }
   shownNames = names;
+}
+
+// a store's basket folds shut or opens, its rows arriving one by one
+function openStores(open) {
+  for (const el of prodsEl.querySelectorAll('.pv-store')) {
+    const on = String(open.includes(el.dataset.st)), was = el.dataset.open;
+    if (was === on) continue;
+    el.dataset.open = on;
+    if (on === 'true' && was && animate) { el.classList.add('enter'); setTimeout(() => el.classList.remove('enter'), 1400); }
+  }
+}
+
+/* ================= the recipe page: each ingredient as the product it becomes ================= */
+const rpage = $('#rpage'), device = $('.device');
+
+// what a line puts on the plate: [kcal, eiwit, koolh., vet] of the product it becomes
+function nutrients(l, product) {
+  const F = FOODS[l.res.food], grams = F.u === 'st' ? l.res.need * (F.gw || 0) : l.res.need;
+  return (product?.nu || [0, 0, 0, 0]).map(x => x * grams / 100);
+}
+
+function macrosHTML(nu, caption) {
+  const f = (x, u = '') => `${Math.round(x)}${u}`;
+  return `<div class="mac"><div><b>${f(nu[0])}</b><span>kcal</span></div><div><b>${f(nu[1], ' g')}</b><span>eiwit</span></div>`
+    + `<div><b>${f(nu[2], ' g')}</b><span>koolh.</span></div><div><b>${f(nu[3], ' g')}</b><span>vet</span></div></div><div class="mcap">${caption}</div>`;
+}
+
+function recipePageHTML() {
+  const r = M.entries.find(e => e.kind === 'recipe');
+  if (!r) return '';
+  const buys = Object.fromEntries(M.baskets[0].buys.map(b => [b.food, b]));
+  const done = r.lines.filter(l => l.status === 'done');
+  const sum = done.reduce((s, l) => s + (l.share || 0), 0);
+  const nu = done.reduce((t, l) => nutrients(l, buys[l.res.food]?.items[0]).map((x, i) => t[i] + x), [0, 0, 0, 0]);
+  let h = `<div class="pane rp"><div class="rp-t">${esc(r.title)}</div><div class="rby"><span class="au">${esc(r.author)}</span>·<span class="lnk">Instagram${ICON.ext}</span></div>`
+    + `<div class="rp-m">Voor ${S.people} personen · <b>${eur(sum / S.people)}</b> per persoon</div>`
+    + macrosHTML(nu.map(x => x / S.people), 'Per persoon') + '<div class="pv-sh">Ingrediënten</div><div class="rp-list">';
+  r.lines.forEach(l => { h += `<div class="ln"><span class="tw"><span class="tx">${esc(l.text)}</span></span><span class="pr">${priceHTML(l, '')}</span></div>`; });
+  h += '</div><div class="rp-prods">';
+  r.lines.forEach((l, i) => { h += rowHTML(`r:${l.id}`, i, buys[l.res?.food]?.items[0], l.text, l.share || 0); });
+  return h + `</div></div><div class="sum"><div class="row"><span>Totaal</span><span class="t">${eur(sum)}</span></div></div>`;
+}
+
+// the recipe page keeps the switch and opens on its list, whatever the list behind it shows
+function setPage(page, view) {
+  const html = recipePageHTML(), shop = view === 'products';
+  if (rpage.dataset.html !== html) { rpage.dataset.html = html; rpage.innerHTML = html; }
+  rpage.classList.toggle('open', page === 'recipe');
+  device.classList.toggle('pushed', page === 'recipe');
+  if (rpage.classList.contains('shop') !== shop) {
+    rpage.classList.toggle('shop', shop);
+    if (shop && animate) { rpage.classList.add('enter'); setTimeout(() => rpage.classList.remove('enter'), 1400); }
+  }
 }
 
 function setView(view) {
   const shop = view === 'products';
   if (note.classList.contains('shop') === shop) return;
   note.classList.toggle('shop', shop);
-  $$('.seg i').forEach((i, k) => i.classList.toggle('on', k === +shop));
   if (shop && animate) { prodsEl.classList.add('enter'); setTimeout(() => prodsEl.classList.remove('enter'), 1400); }
 }
 
 // the phone's own screen follows the list: to the newest line or back to the title
-function follow(where) {
-  const top = () => where === 'end' ? screen.scrollHeight : 0;
-  const go = () => screen.scrollTo({top: top(), behavior: animate && !calm() ? 'smooth' : 'auto'});
+function follow(where, page) {
+  const box = page ? rpage.querySelector('.pane') : pane;
+  const top = () => where === 'end' ? box.scrollHeight : 0;
+  const go = () => box.scrollTo({top: top(), behavior: animate && !calm() ? 'smooth' : 'auto'});
   go(); clearTimeout(follow.t); follow.t = setTimeout(go, 480);
 }
 
@@ -704,10 +785,17 @@ function openMenu(on) {
 }
 
 let at = -1;
-function show(i) {
+function show(i, cut = false) {
   if (i === at) return;
   at = i;
-  const f = FRAMES[i];
+  if (cut) {
+    const was = animate;
+    animate = false; device.classList.add('cut');
+    show.frame(FRAMES[i]);
+    void device.offsetWidth; device.classList.remove('cut'); animate = was;
+  } else show.frame(FRAMES[i]);
+}
+show.frame = f => {
   M.entries = f.entries;
   Object.assign(M, {total: f.total, baskets: f.baskets});
   S.goal = f.goal;
@@ -716,16 +804,25 @@ function show(i) {
     entryEl.classList.add('typing');                 // the caret holds still while letters arrive
     clearTimeout(show.t); show.t = setTimeout(() => entryEl.classList.remove('typing'), 500);
   }
-  render(); renderProducts(); setView(f.ui.view);
-  $('.seg i:last-child').classList.toggle('tap', f.ui.tap === 'bag');
-  $('#goalbtn').classList.toggle('tap', f.ui.tap === 'title');
+  device.classList.toggle('tall', f.ui.tall);
+  render(); renderProducts(); openStores(f.ui.open); setView(f.ui.view); setPage(f.ui.page, f.ui.pageView);
+  const shop = (f.ui.page ? f.ui.pageView : f.ui.view) === 'products';
+  $$('.seg i').forEach((i, k) => i.classList.toggle('on', k === +shop));
   openMenu(f.ui.menu);
   $$('.mi[data-goal]').forEach(m => m.classList.toggle('hot', m.dataset.goal === f.ui.hot));
-  follow(f.ui.scroll);
+  press(f.ui.tap);
+  follow(f.ui.scroll, f.ui.page);
+};
+
+// what the demo taps dims for a moment
+const TARGET = {title: '#goalbtn', rec: '.rec .rt', bag: '.seg i:last-child', ah: '.pv-store[data-st="ah"] .pv-st'};
+function press(what) {
+  $$('.device .tap').forEach(el => el.classList.remove('tap'));
+  if (what) $(TARGET[what])?.classList.add('tap');
 }
 
 /* ================= each section plays its part, and you move on when it has ================= */
-const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge');
+const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge'), up = $('#up');
 const stacked = () => matchMedia('(max-width:900px)').matches;
 const TICK = 200;                                // ms per unit of frame weight
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -737,7 +834,7 @@ const lastOf = c => byChapter[c].at(-1);
 const play = {at: -1, done: -1, token: 0, busy: false};
 
 // where a section's top sits once it has snapped into place
-const snapTop = c => !c ? 64 : stacked() ? stage.offsetHeight : 0;
+const snapTop = c => c || stacked() ? 0 : 64;
 const snapY = c => scrollY + chapters[c].getBoundingClientRect().top - snapTop(c);
 
 function current() {
@@ -752,7 +849,7 @@ async function playPart(c, lock) {
   const token = ++play.token;
   play.busy = lock; updateNudge();
   for (const i of byChapter[c]) {
-    show(i);
+    show(i, i === byChapter[c][0]);
     await sleep(FRAMES[i].w * TICK);
     if (token !== play.token) return;
   }
@@ -770,9 +867,12 @@ function enter(c) {
 
 function updateNudge() {
   nudge.firstChild.textContent = play.at ? 'Scroll verder' : 'Scroll en kijk mee';
-  nudge.classList.toggle('gone', play.busy || play.at >= chapters.length - 1);
+  const last = chapters.length - 1;
+  nudge.classList.toggle('gone', play.busy || play.at >= last);
+  up.classList.toggle('gone', play.busy || play.at < last);
 }
 nudge.addEventListener('click', () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'}));
+up.addEventListener('click', () => scrollTo({top: 0, behavior: calm() ? 'auto' : 'smooth'}));
 
 // while a part plays you can look back up, but not move on
 let ticking = false;
@@ -795,12 +895,23 @@ addEventListener('keydown', e => { if (play.busy && ['ArrowDown', 'PageDown', 'E
 
 /* ================= fitting the phone ================= */
 function fitPhone() {
-  const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
-  const s = stacked() ? Math.min(1, room / 374, innerHeight * .6 / 760) : Math.min(1, Math.max(.72, (innerHeight - 48) / 760));
-  stage.style.setProperty('--s', s.toFixed(3));
-  story.style.setProperty('--park', `${stage.offsetHeight}px`);
+  const root = document.documentElement.style;
+  let s = Math.min(1, Math.max(.72, (innerHeight - 48) / 760)), view = 760;
+  if (stacked()) {
+    // the words take the top, sized for the longest section; the phone takes the width and the rest of the height,
+    // shrinking only when that would leave too little of the list in view
+    root.removeProperty('--pt');
+    const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
+    const pt = Math.max(...chapters.map(c => c.querySelector('.copy').offsetHeight)) + 20;
+    s = Math.min(1, room / 374, (innerHeight - pt) / 400);
+    view = Math.min(760, (innerHeight - pt) / s);
+    root.setProperty('--pt', `${pt}px`);
+  }
+  root.setProperty('--s', s.toFixed(3));
+  stage.style.setProperty('--cut', `${(760 - view).toFixed(1)}px`);
+  device.classList.toggle('crop', view < 760);
 }
-addEventListener('resize', () => { fitPhone(); onScroll(); });
+addEventListener('resize', () => { fitPhone(); updateNudge(); onScroll(); });
 
 /* ================= start ================= */
 build(); index(); fitPhone();
