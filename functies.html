@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tjapp: een boodschappenlijst die zelf rekent</title>
+<meta name="description" content="Schrijf je boodschappen zoals in Notities. Tjapp kiest de producten, vult de hoeveelheden in en zoekt het goedkoopste mandje, bij meerdere supermarkten. Binnenkort in de App Store.">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1C1E'/%3E%3Cpath d='M16 42h32' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 22h18M16 31h14' stroke='%23fff' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M42 22h6M44 31h4' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --graphite:#1C1C1E; --label:#000; --l2:rgba(60,60,67,.62); --l3:rgba(60,60,67,.34); --read:rgba(60,60,67,.8);
+  --bg:#FFF; --grp:#F2F2F7; --cell:#FFF; --sep:rgba(60,60,67,.24); --fill:rgba(120,120,128,.13);
+  --bezel:#1C1C1E; --shadow:rgba(0,0,0,.14); --warn:#C4620A; --on:#1C1C1E; --menu:rgba(250,250,252,.96);
+  --text:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --ease:cubic-bezier(.32,.72,0,1); --out:cubic-bezier(.16,1,.3,1);
+  --gutter:20px; --row:44px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
+  --bg:#000; --grp:#1C1C1E; --cell:#2C2C2E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
+  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6); --warn:#FF9F0A; --on:#636366; --menu:rgba(44,44,46,.97);
+}}
+:root[data-theme="dark"]{
+  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
+  --bg:#000; --grp:#1C1C1E; --cell:#2C2C2E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
+  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6); --warn:#FF9F0A; --on:#636366; --menu:rgba(44,44,46,.97);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--label);font:400 17px/22px var(--text);letter-spacing:-.41px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:color-mix(in srgb,var(--graphite) 18%,transparent)}
+:focus-visible{outline:2px solid var(--graphite);outline-offset:3px;border-radius:8px}
+a{color:inherit}
+button{font:inherit;color:inherit;letter-spacing:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 max(var(--gutter),calc((100vw - 1120px)/2))}
+.wm{font:700 22px/1 var(--display);letter-spacing:-.3px;text-decoration:none}
+.store{display:inline-flex;gap:5px;height:32px;align-items:center;padding:0 14px;border-radius:16px;background:var(--fill);font-size:15px;letter-spacing:-.24px;color:var(--l2);white-space:nowrap;cursor:default}
+.store b{color:var(--label);font-weight:600}
+.store.big{height:44px;padding:0 18px;border-radius:22px;font-size:17px}
+.top .store{visibility:hidden}
+
+/* ---------- story: chapters scroll, the phone stays ---------- */
+.story{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:72px;max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:0 var(--gutter)}
+.ch{grid-column:1;min-height:100svh;display:flex;flex-direction:column;justify-content:center;max-width:540px;padding:48px 0}
+.ch.hero{min-height:calc(100svh - 64px);max-width:600px;padding-top:0}
+/* one section at a time: each snaps into place and plays its part of the demo */
+html{scroll-snap-type:y mandatory}
+.ch{scroll-snap-align:start;scroll-snap-stop:always}
+.ch.hero{scroll-margin-top:64px}
+.fine{scroll-snap-align:end}
+.copy{display:flex;flex-direction:column}
+h1{font:700 clamp(40px,4.3vw,56px)/1.06 var(--display);letter-spacing:-.022em;text-wrap:balance}
+h1 span,h2 span{color:var(--l2)}
+h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text-wrap:balance}
+.lede,.ch p{margin-top:16px;max-width:30em;font-size:19px;line-height:27px;letter-spacing:-.3px;color:var(--read);text-wrap:pretty}
+.ch p b{color:var(--label);font-weight:600}
+.ch p q{color:var(--label);quotes:"‘" "’"}
+.hero .store.big{margin-top:32px;align-self:flex-start}
+.nudge{position:fixed;z-index:10;left:max(var(--gutter),calc((100vw - 1120px)/2));bottom:calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 20px;border-radius:22px;background:var(--label);color:var(--bg);box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:16px;font-weight:600;letter-spacing:-.3px;transition:opacity .3s,transform .3s var(--ease)}
+.nudge svg{width:18px;height:18px;animation:bob 1.6s ease-in-out infinite}
+.nudge.gone{opacity:0;transform:translateY(8px);pointer-events:none}
+@keyframes bob{50%{transform:translateY(3px)}}
+
+.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 380px * var(--s));--s:1;width:calc(374px * var(--s));margin-top:calc(50svh - 64px - 380px * var(--s))}
+.frame{height:calc(760px * var(--s))}
+.device{position:relative;width:374px;height:760px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
+.chrome{position:absolute;left:0;right:0;top:0;z-index:6;background:var(--bg)}
+.screen{position:absolute;inset:98px 0 0;overflow:hidden;scrollbar-width:none;padding:0 20px}
+.screen::-webkit-scrollbar{display:none}
+.status{display:flex;justify-content:space-between;align-items:center;height:54px;padding:6px 30px 0 34px;font:600 16px/1 var(--text);letter-spacing:-.3px}
+.island{position:absolute;left:50%;top:10px;width:112px;height:32px;margin-left:-56px;border-radius:18px;background:#000}
+.status .ic{display:flex;gap:5px;align-items:center}
+.appbar{position:relative;display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 12px}
+.appbar .back{width:32px;height:32px;display:grid;place-items:center;margin-left:-4px}
+.appbar .back svg{width:22px;height:22px}
+.seg{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:2px;border-radius:16px;background:var(--fill)}
+.seg i{width:40px;height:28px;border-radius:14px;display:grid;place-items:center}
+.seg i.on{background:var(--bg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg svg{width:17px;height:17px}
+.circle{width:32px;height:32px;border-radius:16px;background:var(--fill);display:grid;place-items:center;transition:background .25s,color .25s}
+.circle svg{width:18px;height:18px}
+.circle.on{background:var(--label);color:var(--bg)}
+
+/* ---------- the note ---------- */
+.note{position:relative;min-height:100%;display:flex;flex-direction:column}
+.ntitle{display:block;width:100%;text-align:left;font:700 28px/34px var(--display);letter-spacing:.36px;padding:4px 0 6px;border-radius:8px;white-space:nowrap}
+.ntitle span{color:var(--l3)}
+.ntitle svg{display:inline-block;width:18px;height:18px;color:var(--l3);vertical-align:-1px;margin-left:4px}
+.ln{position:relative;display:flex;align-items:flex-start;gap:12px;min-height:var(--row);padding:11px 0;touch-action:pan-y}
+.tw{flex:1;min-width:0;overflow-wrap:anywhere}
+.tx{outline:none;caret-color:var(--graphite)}
+.ghost{color:var(--l3);white-space:nowrap;margin-left:.3em}
+.ghost:empty,.tag:empty{display:none}
+.ghost.in{animation:fadein .5s ease-out both}
+.tag{margin-left:.45em;font-size:13px;letter-spacing:-.08px;color:var(--l2);white-space:nowrap}
+.tag.in{animation:fadein .5s ease-out both}
+.pr{flex:none;min-width:64px;display:flex;justify-content:flex-end;align-items:baseline;gap:7px;color:var(--l2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr .miss{font-size:15px;color:var(--l3)}
+.pr .v{display:inline-block;border-radius:6px;padding:0 4px;margin-right:-4px}
+.pr .v.land{animation:land .34s var(--out) both}
+.pr .v.flash{animation:flash 1.6s ease-out both}
+.dots{display:inline-block;width:1.3em;text-align:left;color:var(--l2);font-weight:700;letter-spacing:1.5px}
+.dots i{font-style:normal}
+.dots i:nth-child(2){animation:dot2 1.2s steps(1,end) infinite var(--dd,0s)}
+.dots i:nth-child(3){animation:dot3 1.2s steps(1,end) infinite var(--dd,0s)}
+@keyframes dot2{0%{opacity:0}33.33%{opacity:1}}
+@keyframes dot3{0%{opacity:0}66.66%{opacity:1}}
+@keyframes land{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes flash{0%,35%{background:color-mix(in srgb,var(--graphite) 14%,transparent);color:var(--label)}100%{background:transparent}}
+@keyframes fadein{from{opacity:0}}
+.ln.enter{animation:rowin .42s var(--out) both}
+@keyframes rowin{from{opacity:0;transform:translateY(6px)}}
+.ln .sk{background:linear-gradient(currentColor,currentColor) no-repeat 0 58%/0 1.5px;transition:background-size .3s var(--out)}
+.ln.crossed .tx,.ln.crossed .ghost{color:var(--l3)}
+.ln.crossed .sk{background-size:100% 1.5px}
+.ln.gone{animation:gone .28s var(--ease) forwards}
+@keyframes gone{to{opacity:0;transform:translateX(-24px)}}
+
+.rec{position:relative}
+.rec.enter .rh{animation:rowin .5s var(--out) both}
+.rh{display:flex;align-items:flex-start;gap:10px;padding:11px 0 4px}
+.rbook{flex:none;width:22px;height:22px;color:var(--label);border-radius:8px}
+.rbook svg{width:22px;height:22px}
+.rtw{flex:1;min-width:0}
+.rt{font-weight:600;text-wrap:balance}
+.rby{display:flex;align-items:baseline;gap:6px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2);padding-top:3px}
+.rby .au{color:var(--label);font-weight:500}
+.lnk{display:inline-flex;align-items:center;gap:2px;color:var(--l2);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;text-decoration-color:var(--l3)}
+.lnk:hover{color:var(--label)}
+.lnk svg{width:12px;height:12px}
+.rkids{--trunk:10.25px;position:relative;display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s var(--ease)}
+.rkids>div{min-height:0;overflow:hidden}
+.rec.shut .rkids{grid-template-rows:0fr}
+.rkids .ln{padding-left:32px}
+.rkids .ln::before{content:"";position:absolute;left:var(--trunk);top:0;bottom:0;width:1.5px;background:var(--l3)}
+.rkids .ln:first-child::before{top:-4px}
+.rkids .ln::after{content:"";position:absolute;left:var(--trunk);top:21.5px;width:12px;height:1.5px;background:var(--l3)}
+.rkids .ln:last-child::before{bottom:auto;height:23px}
+
+.entry{display:flex;align-items:flex-start;min-height:var(--row);padding:11px 0}
+.entry .tx{flex:1;min-width:1px;min-height:22px}
+.entry .tx::after{content:"";display:inline-block;width:2px;height:21px;margin-left:1px;vertical-align:-4px;background:var(--graphite);border-radius:1px;animation:blink 1.06s steps(1,end) infinite}
+.entry.typing .tx::after{animation:none}
+@keyframes blink{50%{opacity:0}}
+
+.sum{position:sticky;bottom:0;z-index:4;margin-top:auto;background:var(--bg);padding:10px 0 30px}
+.sum::before{content:"";display:block;height:1.5px;background:var(--label);margin-right:20px}
+.sum .plus{position:absolute;right:0;top:0;font-size:17px;font-weight:500;line-height:22px;background:var(--bg);padding-left:4px}
+.sum .row{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px}
+.sum .row>span:first-child{font-weight:600}
+.sum .t{font:700 22px/28px var(--display);letter-spacing:.35px;font-variant-numeric:tabular-nums}
+.sum.busy .t{color:var(--l3);transition:color .2s}
+
+/* ---------- goal menu ---------- */
+.menu{position:absolute;left:20px;top:176px;z-index:9;width:262px;border-radius:14px;background:var(--menu);box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px var(--sep);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;transform-origin:18% 0;transform:scale(.6);opacity:0;pointer-events:none;transition:transform .32s var(--ease),opacity .2s}
+.menu.open{transform:none;opacity:1;pointer-events:auto}
+.mi{display:grid;grid-template-columns:22px 1fr;column-gap:8px;width:100%;padding:10px 14px 10px 12px;border-top:.5px solid var(--sep)}
+.mi:first-child{border-top:0}
+.mi svg{width:17px;height:17px;margin-top:2px;visibility:hidden}
+.mi.on svg{visibility:visible}
+.mi b{font-weight:400}
+.mi small{grid-column:2;font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2)}
+.mi.hot{background:var(--fill)}
+.mi[disabled]{color:var(--l3);cursor:default}
+.mi[disabled] small{color:var(--l3)}
+
+/* ---------- products view (the list as a basket per supermarket) ---------- */
+.prods{display:none}
+.note.shop .prods{display:block}
+.note.shop #lines,.note.shop .entry{display:none}
+.pv-st{display:grid;grid-template-columns:1fr auto;align-items:baseline;row-gap:1px;padding:18px 0 8px;font-size:20px;line-height:25px;font-weight:600;letter-spacing:.38px}
+.pv-st:first-child{padding-top:4px}
+.pv-st .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0}
+.pv-st.lose .v{color:var(--l2)}
+.pv-sn{display:flex;align-items:center;gap:6px}
+.pv-sn svg{width:15px;height:15px;color:var(--l3)}
+.pv-st[data-open="false"] .pv-sn svg{transform:rotate(-90deg)}
+.pv-st[data-open="false"]{border-bottom:.5px solid var(--sep);padding-bottom:12px}
+.pv-ss{grid-column:1/-1;font-size:13px;line-height:18px;font-weight:400;letter-spacing:-.08px;color:var(--l2)}
+.pv-sh{font-size:13px;line-height:18px;font-weight:600;color:var(--l2);padding:12px 0 0}
+.pv-row{display:flex;align-items:center;gap:12px;min-height:62px;padding:7px 0}
+.pv-img{flex:none;width:48px;height:48px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 .5px var(--sep);overflow:hidden;display:grid;place-items:center}
+.pv-img img{width:100%;height:100%;object-fit:contain}
+.pv-n{flex:1;min-width:0}
+.pv-n .nm2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-n small{display:block;font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-row .pr{min-width:0}
+.prods.enter .pv-row,.prods.enter .pv-st,.prods.enter .pv-sh{animation:rowin .42s var(--out) both;animation-delay:calc(var(--i,0) * 35ms)}
+.prods.enter .pv-img{animation:pop .5s cubic-bezier(.34,1.3,.5,1) both;animation-delay:calc(120ms + var(--i,0) * 35ms)}
+@keyframes pop{from{opacity:0;transform:scale(.3)}}
+.pv-row.swap .pv-img,.pv-row.swap .nm2{animation:fadein .5s ease-out both}
+.pv-row.swap .pr .v{animation:flash 1.6s ease-out both}
+.seg i{transition:transform .15s,background .25s}
+.seg i.tap{transform:scale(.86)}
+.ntitle{transition:opacity .15s}
+.ntitle.tap{opacity:.45}
+
+/* ---------- close ---------- */
+.close{max-width:calc(1120px + 2 * var(--gutter));margin:48px auto 0;padding:0 var(--gutter) 28px}
+.close .rule{position:relative;height:1.5px;background:var(--label);margin-right:26px}
+.close .rule::after{content:"+";position:absolute;right:-26px;top:-13px;font:500 24px/24px var(--text)}
+.close .row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:16px;flex-wrap:wrap}
+.close .name{font:700 40px/1 var(--display);letter-spacing:-.02em}
+.fine{max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:36px var(--gutter) calc(40px + env(safe-area-inset-bottom));font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--read)}
+.fine p+p{margin-top:4px}
+
+/* ---------- stacked: phone pinned on top, chapters scroll under it ---------- */
+@media (max-width:900px){
+  .top .store{visibility:visible}
+  .hero .store.big{display:none}
+  .story{grid-template-columns:1fr;max-width:calc(680px + 2 * var(--gutter))}
+  .ch{grid-column:1;min-height:auto;max-width:none;padding:28px 0 0;justify-content:flex-start}
+  .ch:not(.hero){height:calc(100svh - var(--park,60svh));min-height:0;scroll-margin-top:var(--park,60svh)}
+  .ch.hero{scroll-snap-align:none}
+  .top{scroll-snap-align:start}
+  .ch.hero{min-height:auto;padding:20px 0 24px}
+  .nudge{left:50%;transform:translateX(-50%)}
+  .nudge.gone{transform:translate(-50%,8px)}
+  .stage{grid-column:1;grid-row:auto;position:sticky;top:0;z-index:5;width:auto;margin:0 calc(-1 * var(--gutter));padding:8px 0 10px;background:var(--bg);display:flex;justify-content:center}
+  .frame{width:calc(374px * var(--s))}
+  .close,.fine{max-width:calc(680px + 2 * var(--gutter))}
+}
+@media (max-width:600px){
+  :root{--gutter:16px}
+  .top{height:56px}
+  h1{font-size:34px;line-height:38px;letter-spacing:-.02em}
+  h2{font-size:28px}
+  .lede,.ch p{font-size:17px;line-height:24px;margin-top:10px}
+  .close .name{font-size:34px}
+  .top .store{font-size:13px;padding:0 11px;height:30px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0s !important;animation-iteration-count:1 !important;transition-duration:0s !important}
+  .dots i{opacity:1}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="wm" href="/" aria-label="Tjapp, home">Tjapp</a>
+  <span class="store" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+</header>
+
+<main class="story">
+  <section class="ch hero" data-scene="0" aria-labelledby="kop">
+    <h1 id="kop">Een boodschappenlijst <span>die zelf rekent.</span></h1>
+    <p class="lede">Schrijf je lijst zoals in Notities. Tjapp kiest bij elke regel het juiste product, vult de hoeveelheid in en zoekt het goedkoopste mandje, bij meerdere supermarkten.</p>
+    <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+  </section>
+
+  <div class="stage" role="img" aria-label="Voorbeeld van de app, dat meespeelt terwijl je scrolt">
+    <div class="frame"><div class="device" inert aria-hidden="true">
+      <div class="chrome">
+        <div class="status" aria-hidden="true"><span>9:41</span><span class="island"></span><span class="ic">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.6c2.1 0 4 .8 5.5 2.1l1.1-1.1A9.3 9.3 0 0 0 8 1 9.3 9.3 0 0 0 1.4 3.6l1.1 1.1A7.8 7.8 0 0 1 8 2.6zm0 3.2c1.2 0 2.3.4 3.2 1.2l1.1-1.1A6.2 6.2 0 0 0 8 4.2c-1.6 0-3.1.6-4.3 1.7l1.1 1.1c.9-.8 2-1.2 3.2-1.2zm0 3.2c-.5 0-.9.2-1.2.5L8 11l1.2-1.5C8.9 9.2 8.5 9 8 9z"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg>
+        </span></div>
+        <div class="appbar">
+          <span class="back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+          <span class="seg" aria-hidden="true"><i class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></i><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8" stroke-linecap="round"/></svg></i></span>
+          <span class="circle" id="filt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg></span>
+        </div>
+      </div>
+      <div class="screen">
+        <div class="note" id="note" role="group" aria-label="Voorbeeld: een boodschappenlijst die je zelf kunt aanpassen">
+          <button class="ntitle" id="goalbtn" type="button" aria-haspopup="menu" aria-expanded="false"><b id="goalw">Goedkoopste</b> <span>mandje</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg></button>
+          <div class="lines" id="lines"></div>
+          <div class="prods" id="prods"></div>
+          <div class="entry" id="entry"><span class="tx" id="entrytx"></span></div>
+          <div class="sum" id="sum"><span class="plus" aria-hidden="true">+</span><div class="row"><span>Totaal</span><span class="t" id="total" aria-live="off">€ 0,00</span></div></div>
+        </div>
+      </div>
+
+      <div class="menu" id="menu" role="menu" aria-label="Doel">
+        <button class="mi on" role="menuitemradio" data-goal="goedkoopst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Goedkoopste</b><small>Het laagste bedrag aan de kassa</small></button>
+        <button class="mi" role="menuitemradio" data-goal="bewerkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Minder bewerkt</b><small>Minder additieven, meer biologisch</small></button>
+        <button class="mi" role="menuitemradio" disabled><svg viewBox="0 0 24 24"></svg><b>Gezondst</b><small>Binnenkort</small></button>
+      </div>
+
+    </div></div>
+  </div>
+
+  <section class="ch" data-scene="1" aria-labelledby="h-doel"><div class="copy">
+    <h2 id="h-doel">Niet alleen <span>de goedkoopste.</span></h2>
+    <p>Tik op de titel en kies waar je op let. Wat je ook kiest, Tjapp zoekt altijd het goedkoopste mandje dat erbij past, met zo min mogelijk restjes.</p>
+  </div></section>
+
+  <section class="ch" data-scene="2" aria-labelledby="h-zin"><div class="copy">
+    <h2 id="h-zin">Typ waar je zin in hebt.</h2>
+    <p>Typ <q>recept met veel kip</q> en Tjapp zet een recept van een echte receptenmaker in je lijst. Elk ingrediënt krijgt meteen een prijs.</p>
+  </div></section>
+
+  <section class="ch" data-scene="3" aria-labelledby="h-winkels"><div class="copy">
+    <h2 id="h-winkels">Eén lijst, <span>elke supermarkt.</span></h2>
+    <p>Tik op het tasje en je lijst wordt een mandje met echte producten. Tjapp rekent het uit bij meerdere supermarkten en zet de goedkoopste bovenaan.</p>
+  </div></section>
+</main>
+
+<button class="nudge gone" id="nudge" type="button">Scroll en kijk mee<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+
+<section class="close" aria-label="Beschikbaarheid">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="row">
+    <span class="name">Tjapp</span>
+    <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+  </div>
+</section>
+
+<footer class="fine">
+  <p>Het voorbeeld gebruikt echte producten, foto’s en prijzen van Albert Heijn (september 2026) voor een klein deel van het assortiment. De Jumbo-prijzen zijn verzonnen. ‘Minder bewerkt’ kiest in dit voorbeeld biologisch waar dat kan.</p>
+  <p>Het recept is van <a class="lnk" href="https://www.instagram.com/chefkeluc/" rel="noopener" target="_blank">@chefkeluc</a>.</p>
+  <p>© 2026 Tjapp · tjapp.app</p>
+</footer>
+
+<script src="demo-data.js"></script>
+<script>
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const eur = v => '€ ' + v.toFixed(2).replace('.', ',');
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+const ICON = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>',
+  bookShut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 18.5v-13a2 2 0 0 1 2-2h11v13h-11a2 2 0 0 0 0 4h11"/><path d="M9.5 7.5h5"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8M9 8h7v7"/></svg>',
+};
+const recipe = id => RECIPES.find(r => r.id === id);
+
+/* ================= settings ================= */
+const S = {goal: 'goedkoopst', people: 2};
+const GOAL_WORD = {goedkoopst: 'Goedkoopste', bewerkt: 'Minder bewerkte'};
+const STORES = ['ah', 'jumbo'], STORE_NAME = {ah: 'Albert Heijn', jumbo: 'Jumbo'};
+// shelves in store-walk order, as in the app's products view
+const AISLE = ['Groente', 'Fruit', 'Brood', 'Vlees', 'Vleeswaren', 'Kaas', 'Zuivel', 'Eieren'];
+const SHELF = {komkommer: 'Groente', avocado: 'Groente', knoflook: 'Groente', romaine: 'Groente', bleekselderij: 'Groente', bosui: 'Groente',
+  bananen: 'Fruit', limoen: 'Fruit', appel: 'Fruit', tortillawraps: 'Brood', kipfilet: 'Vlees', 'geraspte kaas': 'Kaas',
+  melk: 'Zuivel', kwark: 'Zuivel', eieren: 'Eieren'};
+
+/* ================= reading a line ================= */
+const PLURAL = {pak: 'pakken', doos: 'dozen', stuk: 'stuks', zak: 'zakken', bak: 'bakken', bol: 'bollen', pot: 'potten', tros: 'trossen', pakje: 'pakjes', net: 'netten', blik: 'blikken', fles: 'flessen', bakje: 'bakjes', bosje: 'bosjes'};
+const UNITS = {kg: ['g', 1000], kilo: ['g', 1000], gram: ['g', 1], gr: ['g', 1], g: ['g', 1], ons: ['g', 100], pond: ['g', 500],
+  el: ['g', 15], eetlepels: ['g', 15], eetlepel: ['g', 15], tl: ['g', 5], theelepel: ['g', 5],
+  ml: ['ml', 1], cl: ['ml', 10], dl: ['ml', 100], liter: ['ml', 1000], l: ['ml', 1000],
+  stuks: ['st', 1], stuk: ['st', 1], st: ['st', 1], krop: ['st', 1], kroppen: ['st', 1], bosje: ['st', 1],
+  teentjes: ['frac', .1], teentje: ['frac', .1], tenen: ['frac', .1], teen: ['frac', .1], stengels: ['frac', .1], stengel: ['frac', .1],
+  pakken: ['pak', 1], pak: ['pak', 1], zakken: ['pak', 1], zak: ['pak', 1], blikken: ['pak', 1], blik: ['pak', 1], potten: ['pak', 1], pot: ['pak', 1], flessen: ['pak', 1], fles: ['pak', 1], x: ['pak', 1]};
+const UNIT_RE = Object.keys(UNITS).sort((a, b) => b.length - a.length).join('|');
+const ALIASES = Object.entries(FOODS).flatMap(([k, f]) => f.a.map(a => [norm(a), k])).sort((a, b) => b[0].length - a[0].length);
+
+function findFood(t) {
+  for (const [a, k] of ALIASES) if (new RegExp(`(^|[^a-z])${a}([^a-z]|$)`).test(t)) return k;
+  return null;
+}
+const numOf = s => s === '½' ? .5 : s === '¼' ? .25 : parseFloat(s.replace(',', '.'));
+
+function parseLine(text) {
+  const t = norm(text);
+  const m = t.match(new RegExp(`^(\\d+(?:[.,]\\d+)?|½|¼)\\s*(${UNIT_RE})?\\.?\\s+(.+)$`));
+  let amount = null, unit = null, rest = t;
+  if (m) { amount = numOf(m[1]); unit = m[2] || null; rest = m[3]; }
+  const key = findFood(rest.split(' ').map(w => ONE[w] || w).join(' '));
+  if (!key) return {food: null};
+  const F = FOODS[key], small = Math.min(...F.ps.map(p => p.s));
+  let need, ghost = null;
+  if (amount == null) {
+    const packs = Math.ceil(S.people / 2);
+    need = packs * small; ghost = packs === 1 ? `1 ${F.g}` : `${packs} ${PLURAL[F.g] || F.g}`;
+  } else if (!unit) need = F.u === 'st' ? amount : F.w ? amount * F.w : amount * small;
+  else {
+    const [u, f] = UNITS[unit];
+    if (u === 'pak') need = amount * small;
+    else if (u === 'frac') need = F.u === 'st' ? amount * f : (F.w || small) * amount * f;
+    else if (u === 'st') need = F.u === 'st' ? amount : (F.w || small) * amount;
+    else if (F.u === 'st') need = Math.max(1, Math.round(amount * f / (F.w || 150)));
+    else need = amount * f;
+  }
+  return {food: key, need, ghost};
+}
+
+const MANY = {limoen: 'limoenen', teentje: 'teentjes', teen: 'tenen', krop: 'kroppen', appel: 'appels', bosui: 'bosuien', ui: 'uien', wortel: 'wortels', paprika: "paprika's", komkommer: 'komkommers', stengel: 'stengels'};
+const ONE = Object.fromEntries(Object.entries(MANY).map(([a, b]) => [b, a]));
+// scale a recipe line's leading amount and keep the noun in step: "1 limoen" → "2 limoenen"
+function scaleText(text, f) {
+  if (Math.abs(f - 1) < 1e-9) return text;
+  const m = text.match(/^(\d+(?:[.,]\d+)?|½|¼)(\s+)(.*)$/);
+  if (!m) return text;
+  const v = numOf(m[1]) * f, w = Math.floor(v), r = v - w;
+  const frac = [[.25, '¼'], [.5, '½'], [.75, '¾']].find(([x]) => Math.abs(r - x) < .01);
+  const n = r < .01 ? String(w) : frac ? (w || '') + frac[1] : String(Math.round(v * 10) / 10).replace('.', ',');
+  const words = m[3].split(' '), swap = v > 1 ? MANY : ONE;
+  for (const i of [0, 1]) if (swap[words[i]]) { words[i] = swap[words[i]]; break; }
+  return n + m[2] + words.join(' ');
+}
+
+/* ================= products per store ================= */
+function hash(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 9973; return h; }
+// Jumbo has no data yet: its prices are made up from Albert Heijn's, per food (the page says so)
+function jumbo(p, food) {
+  const f = .9 + hash(food) % 100 / 100 * .24;
+  return {...p, n: p.n.replace(/^AH /, 'Jumbo '), p: Math.max(.29, Math.round(p.p * f * 10) / 10 - .01)};
+}
+function pool(food, store) {
+  const F = FOODS[food];
+  const bio = S.goal === 'bewerkt' && F.bio;
+  const ps = bio ? F.bio : F.ps;
+  return {ps: store === 'jumbo' ? ps.map(p => jumbo(p, food)) : ps, tag: bio ? 'bio' : ''};
+}
+
+// cheapest combination of packs that covers the need
+function bestIn(ps, need) {
+  let best = null;
+  const lim = ps.map(p => Math.min(12, Math.ceil(need / p.s)));
+  const rec = (i, counts) => {
+    if (i === ps.length) {
+      const got = counts.reduce((s, c, j) => s + c * ps[j].s, 0);
+      if (got < need - 1e-9) return;
+      const cost = counts.reduce((s, c, j) => s + c * ps[j].p, 0);
+      if (!best || cost < best.cost - 1e-9) best = {cost, counts: [...counts]};
+      return;
+    }
+    for (let c = 0; c <= lim[i]; c++) { counts[i] = c; rec(i + 1, counts); }
+  };
+  rec(0, []);
+  return best;
+}
+
+/* ================= model ================= */
+let UID = 0;
+const M = {entries: [], total: 0, baskets: []};
+const item = (text, recipe = null) => ({id: ++UID, kind: 'item', text, base: text, recipe, status: 'idle', res: null, share: null});
+const allItems = () => M.entries.flatMap(e => e.kind === 'recipe' ? e.lines : [e]);
+const busy = () => allItems().some(l => l.status === 'busy');
+
+function resolve(l) {
+  const p = parseLine(l.text);
+  l.res = p.food ? p : null;
+  l.status = p.food ? 'done' : 'missing';
+}
+
+// one basket per supermarket with the whole list, cheapest first; the list shows the cheapest
+function solve() {
+  const byFood = {};
+  for (const l of allItems()) if (l.status === 'done') (byFood[l.res.food] ??= []).push(l);
+  const baskets = STORES.map(st => ({st, total: 0, buys: []}));
+  for (const [food, ls] of Object.entries(byFood)) {
+    const need = ls.reduce((s, l) => s + l.res.need, 0);
+    const fors = [...new Set(ls.map(l => l.recipe ? l.recipe.title : l.text))].join(', ');
+    for (const bk of baskets) {
+      const p = pool(food, bk.st), b = bestIn(p.ps, need);
+      if (!b) continue;
+      bk.total += b.cost;
+      bk.buys.push({food, cost: b.cost, need, tag: p.tag, fors, items: p.ps.map((x, j) => ({...x, c: b.counts[j]})).filter(x => x.c)});
+    }
+  }
+  baskets.sort((a, b) => a.total - b.total);
+  for (const buy of baskets[0].buys)
+    for (const l of byFood[buy.food]) Object.assign(l, {share: Math.round(buy.cost * l.res.need / buy.need * 100) / 100, tag: buy.tag});
+  Object.assign(M, {total: baskets[0].total, baskets});
+}
+
+function makeRecipe(r) {
+  const rec = {id: ++UID, kind: 'recipe', title: r.title, author: r.author, url: r.url, servings: r.servings, fresh: true};
+  rec.lines = r.lines.map(t => item(t, rec));
+  return rec;
+}
+
+// the goal changed or a recipe arrived: rescale recipes, read every finished line again, price again
+function recompute() {
+  for (const r of M.entries) if (r.kind === 'recipe') for (const l of r.lines) l.text = scaleText(l.base, S.people / r.servings);
+  for (const l of allItems()) if (l.status !== 'busy') resolve(l);
+  solve();
+}
+
+/* ================= the timeline: every state the phone passes through ================= */
+// Each frame is a full copy of the list, the baskets and the goal, with a weight: how long it lasts.
+const FRAMES = [];
+const ui = {menu: false, hot: null, view: 'list', tap: null, scroll: 'top'};
+let chapter = 0, typed = '';
+
+const copyLine = l => ({...l, res: l.res && {...l.res}});
+function hold(w = 1) {
+  FRAMES.push({ch: chapter, w, typed, ui: {...ui}, goal: S.goal, total: M.total, baskets: structuredClone(M.baskets),
+    entries: M.entries.map(e => e.kind === 'recipe' ? {...e, lines: e.lines.map(copyLine)} : copyLine(e))});
+}
+function typeIn(text, w) { for (const c of text) { typed += c; hold(c === ' ' ? w * .5 : w); } }
+function commit() {
+  const l = item(typed.trim());
+  typed = ''; l.status = 'busy';
+  M.entries.push(l);
+  return l;
+}
+function land(l) { resolve(l); solve(); }
+function tap(what) { ui.tap = what; hold(.7); ui.tap = null; }
+
+function build() {
+  // 0 · landing: three lines written, the rest is typed in front of you
+  M.entries = ['melk', '6 eieren', 'bananen'].map(t => item(t));
+  recompute(); typed = 'komkom';
+  hold(1); typeIn('mer', .45); hold(.8);
+  const cucumber = commit(); hold(2.5);
+  land(cucumber); hold(1);
+  typeIn('2 avocado’s', .3); hold(.6);
+  const avocado = commit(); hold(2.5);
+  land(avocado); hold(1.5);
+
+  // 1 · another goal: the same list, other products
+  chapter = 1;
+  hold(1.5); tap('title'); ui.menu = true; hold(4);
+  ui.hot = 'bewerkt'; hold(2);
+  S.goal = 'bewerkt'; recompute(); ui.hot = null; ui.menu = false; hold(8);
+
+  // 2 · a recipe from a few words
+  chapter = 2;
+  hold(.5); typeIn('recept met veeeeel k', .12); typeIn('ip', .45); hold(.8);
+  const ask = commit(); ui.scroll = 'end'; hold(2);
+  const rec = makeRecipe(recipe('chefkeluc-124'));
+  M.entries.splice(M.entries.indexOf(ask), 1, rec);
+  rec.lines.forEach(l => { l.status = 'busy'; });
+  recompute(); hold(1.2);
+  for (const l of rec.lines) { land(l); hold(.3); }
+  hold(3);
+  rec.open = false; ui.scroll = 'top'; hold(1.5);
+
+  // 3 · the products, per supermarket
+  chapter = 3;
+  hold(1); tap('bag');
+  ui.view = 'products'; hold(5);
+  ui.scroll = 'end'; hold(6);
+  ui.scroll = 'top'; hold(2);
+}
+
+/* ================= rendering ================= */
+const els = new Map();
+const linesEl = $('#lines'), entryEl = $('#entry'), entryTx = $('#entrytx'), totalEl = $('#total'), sumEl = $('#sum'), screen = $('.screen');
+const note = $('#note'), prodsEl = $('#prods');
+let animate = false;                             // off for the very first paint
+
+function priceHTML(l, cls) {
+  if (l.status === 'busy') return `<span class="dots" style="--dd:-${(l.id * 0.37) % 1.2}s"><i>.</i><i>.</i><i>.</i></span>`;
+  if (l.status === 'missing') return '<span class="miss">niet gevonden</span>';
+  if (l.status === 'done' && l.share != null) return `<span class="v${cls}">${eur(l.share)}</span>`;
+  return '';
+}
+
+function lineEl(l) {
+  let el = els.get(l.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'ln' + (animate ? ' enter' : '');
+    el.dataset.id = l.id;
+    el.innerHTML = '<span class="tw"><span class="sk"><span class="tx"></span><span class="ghost"></span></span><span class="tag"></span></span><span class="pr"></span>';
+    el.addEventListener('animationend', e => { if (e.target === el) el.classList.remove('enter'); });
+    els.set(l.id, el);
+  }
+  const tx = el.querySelector('.tx'), gh = el.querySelector('.ghost'), tg = el.querySelector('.tag'), pr = el.querySelector('.pr');
+  if (tx.textContent !== l.text) tx.textContent = l.text;
+  const done = l.status === 'done';
+  const ghost = done && l.res?.ghost ? l.res.ghost : '';
+  if (gh.textContent !== ghost) { gh.textContent = ghost; gh.classList.toggle('in', !!ghost && animate); }
+  const tag = done ? l.tag || '' : '';
+  if (tg.textContent !== tag) { tg.textContent = tag; tg.classList.toggle('in', !!tag && animate); }
+  const key = l.status + (l.share ?? '');
+  if (pr.dataset.k !== key) {
+    const was = pr.dataset.k || '';
+    const cls = !animate || !done ? '' : was.startsWith('busy') ? ' land' : was.startsWith('done') ? ' flash' : '';
+    pr.dataset.k = key; pr.innerHTML = priceHTML(l, cls);
+  }
+  return el;
+}
+
+function recipeEl(r) {
+  let el = els.get(r.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'rec' + (animate ? ' enter' : '');
+    el.innerHTML = `<div class="rh"><span class="rbook">${ICON.book}</span><span class="rtw"><span class="rt"></span><span class="rby"><span class="au"></span>·<span class="lnk">Instagram${ICON.ext}</span></span></span><span class="pr"></span></div><div class="rkids"><div></div></div>`;
+    el.querySelector('.rt').textContent = r.title;
+    el.querySelector('.au').textContent = r.author;
+    el.querySelector('.rh').addEventListener('animationend', () => el.classList.remove('enter'), {once: true});
+    els.set(r.id, el);
+  }
+  const kids = el.querySelector('.rkids>div');
+  r.lines.forEach((l, j) => {
+    const k = lineEl(l);
+    if (kids.children[j] !== k) kids.insertBefore(k, kids.children[j] || null);
+    if (k.classList.contains('enter')) k.style.animationDelay = `${j * 60}ms`;
+  });
+  [...kids.children].forEach(c => { if (!r.lines.some(l => l.id === +c.dataset.id)) c.remove(); });
+  const open = r.open !== false, bk = el.querySelector('.rbook');
+  if (el.classList.contains('shut') === open) { bk.innerHTML = open ? ICON.book : ICON.bookShut; el.classList.toggle('shut', !open); }
+  const done = r.lines.filter(l => l.status === 'done' && l.share != null), sum = done.reduce((s, l) => s + l.share, 0);
+  const pr = el.querySelector('.rh .pr'), key = done.length + ':' + sum.toFixed(2);
+  if (pr.dataset.k !== key) { pr.dataset.k = key; pr.innerHTML = done.length ? `<span class="v">${eur(sum)}</span>` : ''; }
+  return el;
+}
+
+// the title stays on one line, as in the app
+function fitTitle() {
+  const t = $('#goalbtn');
+  t.style.fontSize = '';
+  if (t.scrollWidth > t.clientWidth) t.style.fontSize = `${27.5 * t.clientWidth / t.scrollWidth}px`;
+}
+
+function render() {
+  const want = M.entries.map(e => e.kind === 'recipe' ? recipeEl(e) : lineEl(e));
+  want.forEach((el, i) => { if (linesEl.children[i] !== el) linesEl.insertBefore(el, linesEl.children[i] || null); });
+  while (linesEl.children.length > want.length) linesEl.lastElementChild.remove();
+  for (const [id, el] of els) if (!el.isConnected) els.delete(id);
+  sumEl.classList.toggle('busy', busy());
+  $('#goalw').textContent = GOAL_WORD[S.goal];
+  fitTitle();
+  countTo(M.total);
+}
+
+/* ================= the products view: the list as a basket per supermarket ================= */
+const esc = s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]);
+const qty = (s, u) => u === 'g' ? (s >= 1000 ? `${s / 1000} kg` : `${s} g`).replace('.', ',')
+  : u === 'ml' ? (s >= 1000 ? `${s / 1000} l` : `${s} ml`).replace('.', ',') : `${s} st`;
+let shownNames = {};
+
+function productsHTML() {
+  const [win] = M.baskets;
+  return M.baskets.map((bk, k) => {
+    const n = `${bk.buys.length} producten`;
+    const sub = k ? `${eur(bk.total - win.total)} duurder · ${n}` : `Goedkoopst · ${n}`;
+    let h = `<div class="pv-st${k ? ' lose' : ''}" data-open="${!k}"><span class="pv-sn">${STORE_NAME[bk.st]}${ICON.chev}</span><span class="v">${eur(bk.total)}</span><small class="pv-ss">${sub}</small></div>`;
+    if (k) return h;
+    const groups = {};
+    for (const b of bk.buys) (groups[SHELF[b.food] || 'Overig'] ??= []).push(b);
+    const at = r => (i => i < 0 ? 99 : i)(AISLE.indexOf(r));
+    let i = 0;
+    for (const shelf of Object.keys(groups).sort((a, b) => at(a) - at(b))) {
+      h += `<div class="pv-sh">${shelf}</div>`;
+      for (const b of groups[shelf]) {
+        const it = b.items[0], u = FOODS[b.food].u;
+        const packs = b.items.map(x => `${x.c > 1 ? x.c + ' × ' : ''}${qty(x.s, u)}`).join(' + ');
+        h += `<div class="pv-row" data-food="${b.food}" style="--i:${i++}"><span class="pv-img">${it.img ? `<img src="${esc(it.img)}" alt="">` : ''}</span><span class="pv-n"><span class="nm2">${esc(it.n)}</span><small>${packs} · ${esc(b.fors)}</small></span><span class="pr"><span class="v">${eur(b.cost)}</span></span></div>`;
+      }
+    }
+    return h;
+  }).join('');
+}
+
+function renderProducts() {
+  const html = productsHTML();
+  if (prodsEl.dataset.html === html) return;
+  prodsEl.dataset.html = html; prodsEl.innerHTML = html;
+  // products that changed (another goal) swap in visibly
+  const names = {};
+  for (const row of prodsEl.querySelectorAll('.pv-row')) {
+    const nm = row.querySelector('.nm2').textContent;
+    names[row.dataset.food] = nm;
+    if (animate && shownNames[row.dataset.food] && shownNames[row.dataset.food] !== nm) row.classList.add('swap');
+  }
+  shownNames = names;
+}
+
+function setView(view) {
+  const shop = view === 'products';
+  if (note.classList.contains('shop') === shop) return;
+  note.classList.toggle('shop', shop);
+  $$('.seg i').forEach((i, k) => i.classList.toggle('on', k === +shop));
+  if (shop && animate) { prodsEl.classList.add('enter'); setTimeout(() => prodsEl.classList.remove('enter'), 1400); }
+}
+
+// the phone's own screen follows the list: to the newest line or back to the title
+function follow(where) {
+  const top = () => where === 'end' ? screen.scrollHeight : 0;
+  const go = () => screen.scrollTo({top: top(), behavior: animate && !calm() ? 'smooth' : 'auto'});
+  go(); clearTimeout(follow.t); follow.t = setTimeout(go, 480);
+}
+
+let shown = 0, tween = 0;
+function countTo(v) {
+  cancelAnimationFrame(tween); clearTimeout(countTo.done);
+  const set = x => { shown = x; totalEl.textContent = eur(x); };
+  if (!animate || calm()) return set(v);
+  const from = shown, t0 = performance.now(), dur = 520;
+  const step = now => {
+    const k = Math.min(1, Math.max(0, (now - t0) / dur));
+    set(from + (v - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) tween = requestAnimationFrame(step);
+  };
+  tween = requestAnimationFrame(step);
+  countTo.done = setTimeout(() => { cancelAnimationFrame(tween); set(v); }, dur + 80);
+}
+
+const menu = $('#menu');
+function openMenu(on) {
+  const b = $('#goalbtn');
+  menu.style.top = `${98 + b.offsetTop + b.offsetHeight + 2}px`;
+  menu.classList.toggle('open', on);
+  $$('.mi[data-goal]').forEach(m => m.classList.toggle('on', m.dataset.goal === S.goal));
+}
+
+let at = -1;
+function show(i) {
+  if (i === at) return;
+  at = i;
+  const f = FRAMES[i];
+  M.entries = f.entries;
+  Object.assign(M, {total: f.total, baskets: f.baskets});
+  S.goal = f.goal;
+  if (entryTx.textContent !== f.typed) {
+    entryTx.textContent = f.typed;
+    entryEl.classList.add('typing');                 // the caret holds still while letters arrive
+    clearTimeout(show.t); show.t = setTimeout(() => entryEl.classList.remove('typing'), 500);
+  }
+  render(); renderProducts(); setView(f.ui.view);
+  $('.seg i:last-child').classList.toggle('tap', f.ui.tap === 'bag');
+  $('#goalbtn').classList.toggle('tap', f.ui.tap === 'title');
+  openMenu(f.ui.menu);
+  $$('.mi[data-goal]').forEach(m => m.classList.toggle('hot', m.dataset.goal === f.ui.hot));
+  follow(f.ui.scroll);
+}
+
+/* ================= each section plays its part, and you move on when it has ================= */
+const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge');
+const stacked = () => matchMedia('(max-width:900px)').matches;
+const TICK = 200;                                // ms per unit of frame weight
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const byChapter = [];
+const index = () => FRAMES.forEach((f, i) => (byChapter[f.ch] ??= []).push(i));
+const lastOf = c => byChapter[c].at(-1);
+
+const play = {at: -1, done: -1, token: 0, busy: false};
+
+// where a section's top sits once it has snapped into place
+const snapTop = c => !c ? 64 : stacked() ? stage.offsetHeight : 0;
+const snapY = c => scrollY + chapters[c].getBoundingClientRect().top - snapTop(c);
+
+function current() {
+  let at = 0;
+  chapters.forEach((el, c) => {
+    if (c && el.getBoundingClientRect().top - snapTop(c) < (innerHeight - snapTop(c)) / 2) at = c;
+  });
+  return at;
+}
+
+async function playPart(c, lock) {
+  const token = ++play.token;
+  play.busy = lock; updateNudge();
+  for (const i of byChapter[c]) {
+    show(i);
+    await sleep(FRAMES[i].w * TICK);
+    if (token !== play.token) return;
+  }
+  play.busy = false; play.done = Math.max(play.done, c); updateNudge();
+}
+
+function enter(c) {
+  if (c === play.at) return;
+  play.at = c; play.token++; play.busy = false;
+  if (calm()) { show(lastOf(c)); play.done = Math.max(play.done, c); }
+  else if (c <= play.done) playPart(c, false);
+  else { play.done = c - 1; playPart(c, true); }
+  updateNudge();
+}
+
+function updateNudge() {
+  nudge.firstChild.textContent = play.at ? 'Scroll verder' : 'Scroll en kijk mee';
+  nudge.classList.toggle('gone', play.busy || play.at >= chapters.length - 1);
+}
+nudge.addEventListener('click', () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'}));
+
+// while a part plays you can look back up, but not move on
+let ticking = false;
+function onScroll() {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => { ticking = false; check(); });
+}
+function check() {
+  if (play.busy && play.at > 0 && scrollY > snapY(play.at) + 2) { scrollTo({top: snapY(play.at), behavior: 'instant'}); return; }
+  if (play.busy && !play.at && scrollY > 2) { scrollTo({top: 0, behavior: 'instant'}); return; }
+  enter(current());
+}
+addEventListener('scroll', onScroll, {passive: true});
+addEventListener('wheel', e => { if (play.busy && e.deltaY > 0) e.preventDefault(); }, {passive: false});
+let touchY = 0;
+addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, {passive: true});
+addEventListener('touchmove', e => { if (play.busy && e.touches[0].clientY < touchY) e.preventDefault(); }, {passive: false});
+addEventListener('keydown', e => { if (play.busy && ['ArrowDown', 'PageDown', 'End', ' '].includes(e.key)) e.preventDefault(); });
+
+/* ================= fitting the phone ================= */
+function fitPhone() {
+  const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
+  const s = stacked() ? Math.min(1, room / 374, innerHeight * .6 / 760) : Math.min(1, Math.max(.72, (innerHeight - 48) / 760));
+  stage.style.setProperty('--s', s.toFixed(3));
+  story.style.setProperty('--park', `${stage.offsetHeight}px`);
+}
+addEventListener('resize', () => { fitPhone(); onScroll(); });
+
+/* ================= start ================= */
+build(); index(); fitPhone();
+show(0);
+animate = true;
+enter(current());
+</script>
+</body>
+</html>

@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tjapp: je boodschappenlijst, meteen met prijzen</title>
+<meta name="description" content="Typ je boodschappen zoals in Notities. Tjapp zoekt bij Albert Heijn het goedkoopste mandje voor je hele lijst. Binnenkort in de App Store.">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1C1E'/%3E%3Cpath d='M16 42h32' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 22h18M16 31h14' stroke='%23fff' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M42 22h6M44 31h4' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --graphite:#1C1C1E; --label:#000; --l2:rgba(60,60,67,.62); --l3:rgba(60,60,67,.34); --read:rgba(60,60,67,.8);
+  --bg:#FFF; --grp:#F2F2F7; --sep:rgba(60,60,67,.24); --fill:rgba(120,120,128,.13);
+  --bezel:#1C1C1E; --shadow:rgba(0,0,0,.14);
+  --text:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --ease:cubic-bezier(.32,.72,0,1); --out:cubic-bezier(.16,1,.3,1);
+  --gutter:20px; --row:44px; --fs:17px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
+  --bg:#000; --grp:#1C1C1E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
+  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --graphite:#F2F2F7; --label:#FFF; --l2:rgba(235,235,245,.62); --l3:rgba(235,235,245,.32); --read:rgba(235,235,245,.8);
+  --bg:#000; --grp:#1C1C1E; --sep:rgba(84,84,88,.62); --fill:rgba(120,120,128,.30);
+  --bezel:#2C2C2E; --shadow:rgba(0,0,0,.6);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--label);font:400 var(--fs)/22px var(--text);letter-spacing:-.41px;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+::selection{background:color-mix(in srgb,var(--graphite) 18%,transparent)}
+:focus-visible{outline:2px solid var(--graphite);outline-offset:3px;border-radius:8px}
+a{color:inherit}
+button{font:inherit;color:inherit;letter-spacing:inherit;background:none;border:0;cursor:pointer}
+svg{display:block}
+
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 max(var(--gutter),calc((100vw - 1120px)/2))}
+.wm{font:700 22px/1 var(--display);letter-spacing:-.3px;text-decoration:none}
+.store{display:inline-flex;align-items:baseline;gap:5px;height:32px;align-items:center;padding:0 14px;border-radius:16px;background:var(--fill);font-size:15px;letter-spacing:-.24px;color:var(--l2);white-space:nowrap;cursor:default}
+.store b{color:var(--label);font-weight:600}
+
+/* ---------- hero: copy beside the phone ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:72px;max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:24px var(--gutter) 0}
+.copy{max-width:600px}
+h1{font:700 clamp(40px,4.3vw,56px)/1.06 var(--display);letter-spacing:-.022em;text-wrap:balance}
+h1 span{color:var(--l2)}
+.lede{margin-top:16px;max-width:30em;font-size:19px;line-height:27px;letter-spacing:-.3px;color:var(--read);text-wrap:pretty}
+.copy .store.big{display:inline-flex;height:44px;padding:0 18px;border-radius:22px;font-size:17px;margin-top:32px}
+.top .store{visibility:hidden}
+
+/* ---------- the phone ---------- */
+.stage{--s:1;width:calc(374px * var(--s))}
+.frame{height:calc(760px * var(--s))}
+.device{position:relative;width:374px;height:760px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
+.chrome{position:absolute;left:0;right:0;top:0;z-index:6;background:var(--bg)}
+.screen{position:absolute;inset:98px 0 0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:0 20px}
+.screen::-webkit-scrollbar{display:none}
+.status{display:flex;justify-content:space-between;align-items:center;height:54px;padding:6px 30px 0 34px;font:600 16px/1 var(--text);letter-spacing:-.3px}
+.island{position:absolute;left:50%;top:10px;width:112px;height:32px;margin-left:-56px;border-radius:18px;background:#000}
+.status .ic{display:flex;gap:5px;align-items:center}
+.appbar{position:relative;display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 12px}
+.appbar .back{width:32px;height:32px;display:grid;place-items:center;margin-left:-4px}
+.appbar .back svg{width:22px;height:22px}
+.seg{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:2px;border-radius:16px;background:var(--fill)}
+.seg i{width:40px;height:28px;border-radius:14px;display:grid;place-items:center}
+.seg i.on{background:var(--bg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg svg{width:17px;height:17px}
+.circle{width:32px;height:32px;border-radius:16px;background:var(--fill);display:grid;place-items:center}
+.circle svg{width:18px;height:18px}
+
+/* ---------- the note ---------- */
+.note{position:relative;min-height:100%;display:flex;flex-direction:column}
+.ntitle{font:700 28px/34px var(--display);letter-spacing:.36px;padding:4px 0 6px}
+.ntitle span{color:var(--l3);font-weight:700}
+.lines{position:relative}
+.ln{position:relative;display:flex;align-items:flex-start;gap:12px;min-height:var(--row);padding:11px 0}
+.tw{flex:1;min-width:0;overflow-wrap:anywhere}
+.tx{outline:none;caret-color:var(--graphite)}
+.tx:focus-visible{outline:none}
+.ghost{color:var(--l3);white-space:nowrap;margin-left:.3em}
+.ghost:empty{display:none}
+.ghost.in{animation:fadein .5s ease-out both}
+.pr{flex:none;min-width:64px;display:flex;justify-content:flex-end;align-items:baseline;color:var(--l2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr .miss{font-size:15px;color:var(--l3)}
+.pr .v{display:inline-block}
+.pr .v.land{animation:land .34s var(--out) both}
+.dots{display:inline-block;width:1.3em;text-align:left;color:var(--l2);font-weight:700;letter-spacing:1.5px}
+.dots i{font-style:normal}
+.dots i:nth-child(2){animation:dot2 1.2s steps(1,end) infinite var(--dd,0s)}
+.dots i:nth-child(3){animation:dot3 1.2s steps(1,end) infinite var(--dd,0s)}
+@keyframes dot2{0%{opacity:0}33.33%{opacity:1}}
+@keyframes dot3{0%{opacity:0}66.66%{opacity:1}}
+@keyframes land{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes fadein{from{opacity:0}}
+.ln.enter{animation:rowin .42s var(--out) both}
+@keyframes rowin{from{opacity:0;transform:translateY(6px)}}
+
+/* recipe: book, title, byline, tree */
+.rec{position:relative}
+.rec.enter .rh{animation:rowin .5s var(--out) both}
+.rh{display:flex;align-items:flex-start;gap:10px;padding:11px 0 4px}
+.rbook{flex:none;width:22px;height:22px;color:var(--label);border-radius:8px}
+.rbook svg{width:22px;height:22px}
+.rtw{flex:1;min-width:0}
+.rt{font-weight:600;text-wrap:balance}
+.rby{display:flex;align-items:baseline;gap:6px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2);padding-top:3px}
+.rby .au{color:var(--label);font-weight:500}
+.lnk{display:inline-flex;align-items:center;gap:2px;color:var(--l2);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;text-decoration-color:var(--l3)}
+.lnk:hover{color:var(--label)}
+.lnk svg{width:12px;height:12px}
+.rh .pr{padding-top:0}
+.rkids{--trunk:10.25px;position:relative;display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s var(--ease)}
+.rkids>div{min-height:0;overflow:hidden}
+.rec.shut .rkids{grid-template-rows:0fr}
+.rkids .ln{padding-left:32px}
+.rkids .ln::before{content:"";position:absolute;left:var(--trunk);top:0;bottom:0;width:1.5px;background:var(--l3)}
+.rkids .ln:first-child::before{top:-4px}
+.rkids .ln::after{content:"";position:absolute;left:var(--trunk);top:21.5px;width:12px;height:1.5px;background:var(--l3)}
+.rkids .ln:last-child::before{bottom:auto;height:23px}
+
+/* entry line */
+.entry{display:flex;align-items:flex-start;min-height:var(--row);padding:11px 0;cursor:text}
+.entry .tx{flex:1;min-width:1px;min-height:22px}
+.entry:not(.fake) .tx:empty::before{content:attr(data-hint);color:var(--read);pointer-events:none}
+.entry.fake .tx::after,.entry.fake .tx:empty::before{content:"";display:inline-block;width:2px;height:21px;margin-left:1px;vertical-align:-4px;background:var(--graphite);border-radius:1px;animation:blink 1.06s steps(1,end) infinite}
+.entry.fake.typing .tx::after{animation:none}
+.entry.fake .tx:empty::after{content:attr(data-hint);width:auto;height:auto;margin-left:1px;vertical-align:baseline;background:none;color:var(--read);animation:none}
+@keyframes blink{50%{opacity:0}}
+
+/* sum line: sticky, like the app */
+.sum{position:sticky;bottom:0;z-index:4;margin-top:auto;background:var(--bg);padding:10px 0 30px}
+.sum::before{content:"";display:block;height:1.5px;background:var(--label);margin-right:20px}
+.sum .plus{position:absolute;right:0;top:0;font-size:17px;font-weight:500;line-height:22px;background:var(--bg);padding-left:4px}
+.sum .row{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px}
+.sum .row>span:first-child{font-weight:600}
+.sum .t{font:700 22px/28px var(--display);letter-spacing:.35px;font-variant-numeric:tabular-nums}
+.sum.busy .t{color:var(--l3);transition:color .2s}
+
+.after{display:flex;align-items:center;justify-content:center;gap:16px;min-height:44px;margin-top:14px;font-size:15px;letter-spacing:-.24px;color:var(--l2);opacity:0;transition:opacity .4s}
+.after.on{opacity:1}
+.replay{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 10px;border-radius:16px;background:var(--fill);color:var(--label);font-size:15px}
+.replay svg{width:15px;height:15px}
+.replay:hover{background:color-mix(in srgb,var(--fill) 100%,var(--l3) 30%)}
+
+/* ---------- close ---------- */
+.close{max-width:calc(1120px + 2 * var(--gutter));margin:88px auto 0;padding:0 var(--gutter) 28px}
+.close .rule{position:relative;height:1.5px;background:var(--label);margin-right:26px}
+.close .rule::after{content:"+";position:absolute;right:-26px;top:-13px;font:500 24px/24px var(--text)}
+.close .row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:16px;flex-wrap:wrap}
+.close .name{font:700 40px/1 var(--display);letter-spacing:-.02em}
+.close .store{height:44px;padding:0 18px;border-radius:22px;font-size:17px}
+.fine{max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:36px var(--gutter) calc(40px + env(safe-area-inset-bottom));font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--read)}
+.fine p+p{margin-top:4px}
+
+/* ---------- narrow ---------- */
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr;row-gap:32px;max-width:calc(680px + 2 * var(--gutter))}
+  .close,.fine{max-width:calc(680px + 2 * var(--gutter))}
+  .copy .store.big{display:none}
+  .top .store{visibility:visible}
+  .stage{margin:0 auto}
+}
+@media (max-width:600px){
+  :root{--gutter:16px}
+  .top{height:56px}
+  .hero{padding-top:20px}
+  h1{font-size:34px;line-height:38px;letter-spacing:-.02em}
+  .lede{font-size:17px;line-height:24px;margin-top:12px}
+  .close{margin-top:72px}
+  .close .name{font-size:34px}
+  .top .store{font-size:13px;padding:0 11px;height:30px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0s !important;animation-iteration-count:1 !important;transition-duration:0s !important}
+  .dots i{opacity:1}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="wm" href="/" aria-label="Tjapp, home">Tjapp</a>
+  <span class="store" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+</header>
+
+<main>
+  <section class="hero" aria-labelledby="kop">
+    <div class="copy">
+      <h1 id="kop">Je boodschappenlijst, <span>meteen met prijzen.</span></h1>
+      <p class="lede">Typ zoals in Notities. Tjapp zoekt bij Albert Heijn het goedkoopste mandje voor je hele lijst.</p>
+      <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+    </div>
+
+    <div class="stage">
+      <div class="frame"><div class="device">
+        <div class="chrome" aria-hidden="true">
+          <div class="status"><span>9:41</span><span class="island"></span><span class="ic">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.6c2.1 0 4 .8 5.5 2.1l1.1-1.1A9.3 9.3 0 0 0 8 1 9.3 9.3 0 0 0 1.4 3.6l1.1 1.1A7.8 7.8 0 0 1 8 2.6zm0 3.2c1.2 0 2.3.4 3.2 1.2l1.1-1.1A6.2 6.2 0 0 0 8 4.2c-1.6 0-3.1.6-4.3 1.7l1.1 1.1c.9-.8 2-1.2 3.2-1.2zm0 3.2c-.5 0-.9.2-1.2.5L8 11l1.2-1.5C8.9 9.2 8.5 9 8 9z"/></svg>
+            <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg>
+          </span></div>
+          <div class="appbar">
+            <span class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="seg"><i class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></i><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8" stroke-linecap="round"/></svg></i></span>
+            <span class="circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg></span>
+          </div>
+        </div>
+        <div class="screen">
+          <div class="note" id="note" role="group" aria-label="Voorbeeld: een boodschappenlijst die je zelf kunt aanpassen">
+            <div class="ntitle"><b>Goedkoopste</b> <span>mandje</span></div>
+            <div class="lines" id="lines"></div>
+            <div class="entry fake" id="entry"><span class="tx" id="entrytx" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Nieuwe regel" data-hint=""></span></div>
+            <div class="sum" id="sum"><span class="plus" aria-hidden="true">+</span><div class="row"><span>Totaal</span><span class="t" id="total" aria-live="off">€ 0,00</span></div></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="after" id="after">
+        <button class="replay" id="replay" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>Opnieuw</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="close" aria-label="Beschikbaarheid">
+    <div class="rule" aria-hidden="true"></div>
+    <div class="row">
+      <span class="name">Tjapp</span>
+      <span class="store" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+    </div>
+  </section>
+</main>
+
+<footer class="fine">
+  <p>Het voorbeeld gebruikt echte producten en prijzen van Albert Heijn (september 2026) voor een klein deel van het assortiment. Tjapp begint bij Albert Heijn.</p>
+  <p>Een recept vragen met ‘recept met …’ is nog in de maak. Het recept is van <a class="lnk" href="https://www.instagram.com/chefkeluc/" rel="noopener" target="_blank">@chefkeluc</a>.</p>
+  <p>© 2026 Tjapp · tjapp.app</p>
+</footer>
+
+<script src="demo-data.js"></script>
+<script>
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const eur = v => '€ ' + v.toFixed(2).replace('.', ',');
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ICON = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>',
+  bookShut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 18.5v-13a2 2 0 0 1 2-2h11v13h-11a2 2 0 0 0 0 4h11"/><path d="M9.5 7.5h5"/></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8M9 8h7v7"/></svg>',
+};
+
+/* ================= reading a line ================= */
+const HOUSEHOLD = 2;
+const PLURAL = {pak: 'pakken', doos: 'dozen', stuk: 'stuks', zak: 'zakken', bak: 'bakken', bol: 'bollen', pot: 'potten', tros: 'trossen', pakje: 'pakjes', net: 'netten', blik: 'blikken', fles: 'flessen', bakje: 'bakjes', bosje: 'bosjes'};
+// unit word → [kind, factor]; 'frac' is a part of one piece (a clove of a bulb, a stalk of a head)
+const UNITS = {kg: ['g', 1000], kilo: ['g', 1000], gram: ['g', 1], gr: ['g', 1], g: ['g', 1], ons: ['g', 100], pond: ['g', 500],
+  el: ['g', 15], eetlepels: ['g', 15], eetlepel: ['g', 15], tl: ['g', 5], theelepel: ['g', 5],
+  ml: ['ml', 1], cl: ['ml', 10], dl: ['ml', 100], liter: ['ml', 1000], l: ['ml', 1000],
+  stuks: ['st', 1], stuk: ['st', 1], st: ['st', 1], krop: ['st', 1], kroppen: ['st', 1], bosje: ['st', 1],
+  teentjes: ['frac', .1], teentje: ['frac', .1], tenen: ['frac', .1], teen: ['frac', .1], stengels: ['frac', .1], stengel: ['frac', .1],
+  pakken: ['pak', 1], pak: ['pak', 1], zakken: ['pak', 1], zak: ['pak', 1], blikken: ['pak', 1], blik: ['pak', 1], potten: ['pak', 1], pot: ['pak', 1], flessen: ['pak', 1], fles: ['pak', 1], x: ['pak', 1]};
+const UNIT_RE = Object.keys(UNITS).sort((a, b) => b.length - a.length).join('|');
+const ALIASES = Object.entries(FOODS).flatMap(([k, f]) => f.a.map(a => [norm(a), k])).sort((a, b) => b[0].length - a[0].length);
+
+function findFood(t) {
+  for (const [a, k] of ALIASES) if (new RegExp(`(^|[^a-z])${a}([^a-z]|$)`).test(t)) return k;
+  return null;
+}
+function numOf(s) { return s === '½' ? .5 : s === '¼' ? .25 : parseFloat(s.replace(',', '.')); }
+
+function parseLine(text) {
+  const t = norm(text);
+  if (/^recepte?n?\b/.test(t)) return {query: t.replace(/^recepte?n?\s*/, '')};
+  const m = t.match(new RegExp(`^(\\d+(?:[.,]\\d+)?|½|¼)\\s*(${UNIT_RE})?\\.?\\s+(.+)$`));
+  let amount = null, unit = null, rest = t;
+  if (m) { amount = numOf(m[1]); unit = m[2] || null; rest = m[3]; }
+  const key = findFood(rest);
+  if (!key) return {food: null};
+  const F = FOODS[key], small = Math.min(...F.ps.map(p => p.s));
+  let need, ghost = null;
+  if (amount == null) {
+    const packs = Math.ceil(HOUSEHOLD / 2);
+    need = packs * small; ghost = packs === 1 ? `1 ${F.g}` : `${packs} ${PLURAL[F.g] || F.g}`;
+  } else if (!unit) need = F.u === 'st' ? amount : F.w ? amount * F.w : amount * small;
+  else {
+    const [u, f] = UNITS[unit];
+    if (u === 'pak') need = amount * small;
+    else if (u === 'frac') need = F.u === 'st' ? amount * f : (F.w || small) * amount * f;
+    else if (u === 'st') need = F.u === 'st' ? amount : (F.w || small) * amount;
+    else if (F.u === 'st') need = Math.max(1, Math.round(amount * f / (F.w || 150)));
+    else need = amount * f;
+  }
+  return {food: key, need, ghost};
+}
+
+// cheapest combination of packs that covers the need
+function bestIn(ps, need) {
+  let best = null;
+  const lim = ps.map(p => Math.min(12, Math.ceil(need / p.s)));
+  const rec = (i, counts) => {
+    if (i === ps.length) {
+      const got = counts.reduce((s, c, j) => s + c * ps[j].s, 0);
+      if (got < need - 1e-9) return;
+      const cost = counts.reduce((s, c, j) => s + c * ps[j].p, 0);
+      if (!best || cost < best.cost - 1e-9) best = {cost, counts: [...counts]};
+      return;
+    }
+    for (let c = 0; c <= lim[i]; c++) { counts[i] = c; rec(i + 1, counts); }
+  };
+  rec(0, []);
+  return best;
+}
+
+function findRecipe(query) {
+  const words = norm(query).split(' ').filter(w => w && !/^(met|en|of|van|voor|een|de|het|lekker|snel|makkelijk|v+e+l+|heel)$/.test(w));
+  return RECIPES.find(r => words.some(w => r.tags.some(t => t.startsWith(w) || w.startsWith(t)))) || null;
+}
+
+function scaleText(text, f) {
+  if (f === 1) return text;
+  return text.replace(/^(\d+(?:[.,]\d+)?)/, n => {
+    const v = parseFloat(n.replace(',', '.')) * f, w = Math.floor(v), r = v - w;
+    return r < .01 ? String(w) : Math.abs(r - .5) < .01 ? (w || '') + '½' : String(Math.round(v * 10) / 10).replace('.', ',');
+  });
+}
+
+/* ================= model ================= */
+let UID = 0;
+const M = {entries: [], total: 0};
+const item = (text, recipe = null) => ({id: ++UID, kind: 'item', text, recipe, status: 'idle', res: null, share: null, landAt: 0});
+const allItems = () => M.entries.flatMap(e => e.kind === 'recipe' ? e.lines : [e]);
+const busy = () => allItems().some(l => l.status === 'busy');
+
+function resolve(l) {
+  const p = parseLine(l.text);
+  if (p.query !== undefined) return p;
+  l.res = p.food ? p : null;
+  l.status = p.food ? 'done' : 'missing';
+  return null;
+}
+
+function solve() {
+  const byFood = {};
+  for (const l of allItems()) if (l.status === 'done') (byFood[l.res.food] ??= []).push(l);
+  let total = 0;
+  for (const [food, ls] of Object.entries(byFood)) {
+    const need = ls.reduce((s, l) => s + l.res.need, 0), b = bestIn(FOODS[food].ps, need);
+    if (!b) { ls.forEach(l => { l.status = 'missing'; l.share = null; }); continue; }
+    total += b.cost;
+    for (const l of ls) l.share = Math.round(b.cost * l.res.need / need * 100) / 100;
+  }
+  M.total = total;
+}
+
+function makeRecipe(r) {
+  const f = HOUSEHOLD / r.servings;
+  const rec = {id: ++UID, kind: 'recipe', title: r.title, author: r.author, url: r.url, fresh: true};
+  rec.lines = r.lines.map(t => item(scaleText(t, f), rec));
+  return rec;
+}
+
+/* ================= running lines ================= */
+let speed = 1;                                   // 0 while skipping to the end state
+const wait = ms => speed ? sleep(ms * speed) : Promise.resolve();
+
+async function run(l, ms = 900) {
+  l.status = 'busy'; render();
+  await wait(ms);
+  if (!M.entries.includes(l) && !(l.recipe && M.entries.includes(l.recipe))) return;
+  const q = resolve(l);
+  if (q) return runRecipe(l, q.query);
+  l.landAt = performance.now(); solve(); render();
+}
+
+async function runRecipe(l, query) {
+  const r = findRecipe(query), i = M.entries.indexOf(l);
+  if (!r || i < 0) { l.status = 'missing'; l.res = null; render(); return; }
+  if (M.entries.some(e => e.kind === 'recipe' && e.title === r.title)) { M.entries.splice(i, 1); render(); return; }
+  const rec = makeRecipe(r);
+  M.entries.splice(i, 1, rec);
+  rec.lines.forEach(k => { k.status = 'busy'; });
+  render();
+  await Promise.all(rec.lines.map((k, j) => wait(600 + j * 160).then(() => {
+    resolve(k); k.landAt = performance.now(); solve(); render();
+  })));
+}
+
+/* ================= rendering ================= */
+const els = new Map();
+const linesEl = $('#lines'), entryEl = $('#entry'), entryTx = $('#entrytx'), totalEl = $('#total'), sumEl = $('#sum');
+
+function priceHTML(l) {
+  if (l.status === 'busy') return `<span class="dots" style="--dd:-${(l.id * 0.37) % 1.2}s"><i>.</i><i>.</i><i>.</i></span>`;
+  if (l.status === 'missing') return '<span class="miss">niet gevonden</span>';
+  if (l.status === 'done' && l.share != null) {
+    const land = speed && performance.now() - l.landAt < 250 ? ' land' : '';
+    return `<span class="v${land}">${eur(l.share)}</span>`;
+  }
+  return '';
+}
+
+function lineEl(l) {
+  let el = els.get(l.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'ln' + (speed && !l.quiet ? ' enter' : '');
+    el.dataset.id = l.id;
+    el.innerHTML = '<span class="tw"><span class="tx" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Regel"></span><span class="ghost"></span></span><span class="pr"></span>';
+    el.querySelector('.tx').textContent = l.text;
+    if (el.querySelector('.tx').contentEditable !== 'plaintext-only') el.querySelector('.tx').contentEditable = 'true';
+    el.addEventListener('animationend', () => el.classList.remove('enter'), {once: true});
+    els.set(l.id, el);
+  }
+  const tx = el.querySelector('.tx'), gh = el.querySelector('.ghost'), pr = el.querySelector('.pr');
+  if (document.activeElement !== tx && tx.textContent !== l.text) tx.textContent = l.text;
+  const ghost = l.status === 'done' && l.res?.ghost && document.activeElement !== tx ? l.res.ghost : '';
+  if (gh.textContent !== ghost) { gh.textContent = ghost; gh.classList.toggle('in', !!ghost && !!speed); }
+  const html = priceHTML(l), key = l.status + (l.share ?? '');
+  if (pr.dataset.k !== key) { pr.dataset.k = key; pr.innerHTML = html; }
+  return el;
+}
+
+function recipeEl(r) {
+  let el = els.get(r.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'rec' + (speed ? ' enter' : '');
+    el.innerHTML = `<div class="rh"><button class="rbook" type="button" aria-expanded="true" aria-label="Ingrediënten tonen of verbergen">${ICON.book}</button><span class="rtw"><span class="rt"></span><span class="rby"><span class="au"></span>·<a class="lnk" rel="noopener" target="_blank">Instagram${ICON.ext}</a></span></span><span class="pr"></span></div><div class="rkids"><div></div></div>`;
+    el.querySelector('.rt').textContent = r.title;
+    el.querySelector('.au').textContent = r.author;
+    el.querySelector('.lnk').href = r.url;
+    el.querySelector('.rh').addEventListener('animationend', () => el.classList.remove('enter'), {once: true});
+    els.set(r.id, el);
+  }
+  const kids = el.querySelector('.rkids>div');
+  r.lines.forEach((l, j) => {
+    const k = lineEl(l);
+    if (k.parentNode !== kids || kids.children[j] !== k) kids.insertBefore(k, kids.children[j] || null);
+    if (k.classList.contains('enter')) k.style.animationDelay = r.fresh ? `${j * 60}ms` : '0ms';
+  });
+  [...kids.children].forEach(c => { if (!r.lines.some(l => l.id === +c.dataset.id)) c.remove(); });
+  r.fresh = false;
+  const bk = el.querySelector('.rbook'), open = r.open !== false;
+  if (bk.getAttribute('aria-expanded') !== String(open)) { bk.setAttribute('aria-expanded', open); bk.innerHTML = open ? ICON.book : ICON.bookShut; }
+  el.classList.toggle('shut', !open);
+  const done = r.lines.filter(l => l.status === 'done' && l.share != null);
+  const pr = el.querySelector('.rh .pr'), key = done.length + ':' + done.reduce((s, l) => s + l.share, 0);
+  if (pr.dataset.k !== key) {
+    pr.dataset.k = key;
+    pr.innerHTML = done.length ? `<span class="v">${eur(done.reduce((s, l) => s + l.share, 0))}</span>` : '';
+  }
+  return el;
+}
+
+function render() {
+  const want = M.entries.map(e => e.kind === 'recipe' ? recipeEl(e) : lineEl(e));
+  want.forEach((el, i) => { if (linesEl.children[i] !== el) linesEl.insertBefore(el, linesEl.children[i] || null); });
+  while (linesEl.children.length > want.length) linesEl.lastElementChild.remove();
+  for (const [id, el] of els) if (!el.isConnected) els.delete(id);
+  sumEl.classList.toggle('busy', busy());
+  countTo(M.total);
+  if (demo.running) {
+    const s = $('.screen'); s.scrollTop = s.scrollHeight;
+  }
+}
+
+let shown = 0, tween = 0;
+function countTo(v) {
+  cancelAnimationFrame(tween);
+  if (!speed || calm()) { shown = v; totalEl.textContent = eur(v); return; }
+  const from = shown, t0 = performance.now(), dur = 520;
+  const step = now => {
+    const k = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+    shown = from + (v - from) * e; totalEl.textContent = eur(shown);
+    if (k < 1) tween = requestAnimationFrame(step);
+  };
+  tween = requestAnimationFrame(step);
+  clearTimeout(countTo.done);
+  countTo.done = setTimeout(() => { cancelAnimationFrame(tween); shown = v; totalEl.textContent = eur(v); }, dur + 80);
+}
+
+/* ================= the demo ================= */
+const demo = {running: false, token: 0};
+const HINT = 'Typ een regel, of ‘recept met gehakt’';
+
+function seed() {
+  M.entries = ['melk', '6 eieren', 'bananen'].map(t => item(t));
+  M.entries.forEach(l => { l.quiet = true; resolve(l); });
+  solve();
+  els.clear(); linesEl.textContent = '';
+  entryTx.textContent = ''; entryTx.dataset.hint = '';
+  $('#after').classList.remove('on');
+  totalEl.setAttribute('aria-live', 'off');
+}
+
+async function type(text, base) {
+  entryEl.classList.add('typing');
+  for (const ch of text) {
+    entryTx.textContent += ch;
+    await wait(base + (ch === ' ' ? 40 : Math.random() * 45));
+  }
+  entryEl.classList.remove('typing');
+}
+
+async function play() {
+  const token = ++demo.token;
+  demo.running = true; speed = calm() ? 0 : 1;
+  seed(); render();
+  entryEl.classList.add('fake');
+  entryTx.textContent = 'komkom';
+  const alive = () => token === demo.token;
+  await wait(650); if (!alive()) return;
+  await type('mer', 95); if (!alive()) return;
+  await wait(260); if (!alive()) return;
+  const cucumber = commitText(entryTx.textContent, 900);
+  await wait(700); if (!alive()) return;
+  await type('recept met veeeeel kip', 62); if (!alive()) return;
+  await wait(320); if (!alive()) return;
+  const chicken = commitText(entryTx.textContent, 1300);
+  await Promise.all([cucumber, chicken]); if (!alive()) return;
+  await wait(500);
+  finish(token);
+}
+
+function finish(token) {
+  if (token !== demo.token) return;
+  demo.running = false; speed = 1;
+  // fold the recipe once its tree has been seen, so the whole note fits the screen
+  setTimeout(() => {
+    if (token !== demo.token) return;
+    M.entries.filter(e => e.kind === 'recipe').forEach(r => { r.open = false; });
+    render();
+    setTimeout(() => $('.screen').scrollTo({top: 0, behavior: calm() ? 'auto' : 'smooth'}), 250);
+  }, speed && !calm() ? 1500 : 0);
+  entryTx.dataset.hint = HINT;
+  $('#after').classList.add('on');
+  totalEl.setAttribute('aria-live', 'polite');
+}
+
+// the visitor takes over mid-demo: jump to the finished list at once, keeping the rows already on screen
+function skip() {
+  if (!demo.running) return;
+  const token = ++demo.token;
+  speed = 0;
+  entryEl.classList.remove('fake', 'typing');
+  entryTx.textContent = '';
+  const texts = M.entries.map(e => e.kind === 'item' ? norm(e.text) : '');
+  if (!texts.includes('komkommer')) M.entries.push(item('komkommer'));
+  const ask = M.entries.find(e => e.kind === 'item' && /^recept/.test(norm(e.text)));
+  const rec = M.entries.find(e => e.kind === 'recipe') || makeRecipe(RECIPES[0]);
+  if (ask) M.entries.splice(M.entries.indexOf(ask), 1, rec);
+  else if (!M.entries.includes(rec)) M.entries.push(rec);
+  for (const l of allItems()) if (l.status !== 'done' && l.status !== 'missing') resolve(l);
+  solve(); render();
+  finish(token);
+}
+
+function commitText(text, ms) {
+  const t = text.trim();
+  entryTx.textContent = '';
+  if (!t) return Promise.resolve();
+  const l = item(t);
+  M.entries.push(l);
+  return run(l, ms);
+}
+
+/* ================= editing like a note ================= */
+const editables = () => [...document.querySelectorAll('#lines .tx'), entryTx];
+function caretToEnd(el) {
+  el.focus();
+  const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function caretAtStart() {
+  const s = getSelection();
+  return s.rangeCount && s.isCollapsed && s.getRangeAt(0).startOffset === 0;
+}
+function itemOf(tx) {
+  const id = +tx.closest('.ln')?.dataset.id;
+  return allItems().find(l => l.id === id);
+}
+function removeItem(l) {
+  if (l.recipe) {
+    l.recipe.lines = l.recipe.lines.filter(x => x !== l);
+    if (!l.recipe.lines.length) M.entries = M.entries.filter(e => e !== l.recipe);
+  } else M.entries = M.entries.filter(e => e !== l);
+  solve(); render();
+}
+
+const note = $('#note');
+note.addEventListener('click', e => {
+  const bk = e.target.closest('.rbook');
+  if (!bk) return;
+  const r = M.entries.find(x => x.kind === 'recipe' && els.get(x.id) === bk.closest('.rec'));
+  if (r) { r.open = r.open === false; render(); }
+});
+note.addEventListener('pointerdown', () => { if (demo.running) skip(); });
+note.addEventListener('focusin', e => {
+  if (demo.running) skip();
+  entryEl.classList.remove('fake');
+  if (e.target.classList.contains('tx')) e.target.dataset.was = e.target.textContent;
+  const l = itemOf(e.target);
+  if (l) lineEl(l);
+});
+note.addEventListener('focusout', e => {
+  const tx = e.target;
+  if (!tx.classList?.contains('tx') || tx === entryTx) return;
+  const l = itemOf(tx);
+  if (!l) return;
+  const t = tx.textContent.trim();
+  if (t === tx.dataset.was?.trim()) { lineEl(l); return; }
+  if (!t) { removeItem(l); return; }
+  l.text = t; run(l, 700);
+});
+note.addEventListener('keydown', e => {
+  const tx = e.target;
+  if (!tx.classList?.contains('tx')) return;
+  const list = editables(), i = list.indexOf(tx);
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (tx === entryTx) { commitText(entryTx.textContent); caretToEnd(entryTx); }
+    else caretToEnd(entryTx);
+  } else if (e.key === 'Backspace' && tx.textContent === '' && i > 0) {
+    e.preventDefault();
+    const prev = list[i - 1];
+    if (tx !== entryTx) { const l = itemOf(tx); tx.dataset.was = ''; if (l) removeItem(l); }
+    caretToEnd(prev);
+  } else if (e.key === 'ArrowUp' && i > 0) { e.preventDefault(); caretToEnd(list[i - 1]); }
+  else if (e.key === 'ArrowDown' && i < list.length - 1) { e.preventDefault(); caretToEnd(list[i + 1]); }
+});
+// keep pasted text plain for browsers without plaintext-only
+note.addEventListener('paste', e => {
+  if (!e.target.classList?.contains('tx')) return;
+  e.preventDefault();
+  document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s*\n\s*/g, ' '));
+});
+entryEl.addEventListener('click', e => { if (e.target === entryEl) caretToEnd(entryTx); });
+if (entryTx.contentEditable !== 'plaintext-only') editables().forEach(t => t.contentEditable = 'true');
+
+$('#replay').addEventListener('click', () => { document.activeElement?.blur(); play(); });
+
+/* ================= start ================= */
+// scale the phone as one object: to the window height beside the copy, to the width when stacked
+const stage = $('.stage');
+function fitPhone() {
+  const stacked = matchMedia('(max-width:900px)').matches;
+  const byWidth = (stage.parentElement.clientWidth - 2 * parseFloat(getComputedStyle(stage.parentElement).paddingLeft)) / 374;
+  const s = Math.min(1, byWidth, stacked ? 1 : Math.max(.78, (innerHeight - 110) / 760));
+  stage.style.setProperty('--s', s.toFixed(3));
+}
+fitPhone();
+addEventListener('resize', fitPhone);
+seed(); render();
+entryTx.textContent = 'komkom';
+function start() {
+  if (demo.token) return;
+  if (calm()) { demo.running = true; skip(); } else play();
+}
+const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); start(); } }, {threshold: .2});
+addEventListener('load', () => {
+  const r = note.getBoundingClientRect();
+  if (r.top < innerHeight && r.bottom > 0) setTimeout(start, 300); else io.observe(note);
+});
+</script>
+</body>
+</html>
