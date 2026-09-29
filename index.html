@@ -126,10 +126,11 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .ln.enter{animation:rowin .42s var(--out) both}
 @keyframes rowin{from{opacity:0;transform:translateY(6px)}}
 .ln .sk{background:linear-gradient(currentColor,currentColor) no-repeat 0 58%/0 1.5px;transition:background-size .3s var(--out)}
-.ln.crossed .tx,.ln.crossed .ghost{color:var(--l3)}
+.ln.crossed .tx,.ln.crossed .ghost,.ln.crossed .tag,.ln.crossed .pr{color:var(--l3)}
 .ln.crossed .sk{background-size:100% 1.5px}
-.ln.gone{animation:gone .28s var(--ease) forwards}
+.ln.gone{overflow:hidden;animation:gone .28s var(--ease) forwards,shut .3s .2s var(--ease) forwards}
 @keyframes gone{to{opacity:0;transform:translateX(-24px)}}
+@keyframes shut{from{max-height:66px}to{max-height:0;min-height:0;padding-block:0}}
 
 .rec{position:relative}
 .rec.enter .rh{animation:rowin .5s var(--out) both}
@@ -313,7 +314,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
     <div class="copy">
       <h1 id="kop">Je boodschappenlijst, <span>altijd geoptimaliseerd.</span></h1>
       <div class="sub">
-        <p class="lede">Schrijf je lijst zoals in Notities. Tjapp zoekt bij elke regel het beste mandje.</p>
+        <p class="lede">Schrijf je lijst zoals in Notities. Tjapp zoekt bij elke regel de beste optie.</p>
         <button class="hint" id="hint" type="button" inert>scroll :)<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
       </div>
     </div>
@@ -617,9 +618,17 @@ function build() {
   tap('bag'); ui.view = 'products'; hold(8);
   tap('ah'); ui.open = ['jumbo']; hold(8);
 
-  // 4 · the close: back to the list, the caret waits for you
+  // 4 · the close: back to the list, and it goes on the way a note does: write, cross off, drop, write
   chapter = 4;
-  hold(.1); tap('list'); ui.view = 'list'; hold(4);
+  hold(.1); tap('list'); ui.view = 'list'; hold(2);
+  ui.scroll = 'end';
+  const write = (text, w = .3) => { typeIn(text, w); hold(.5); const l = commit(); hold(2); land(l); hold(1.2); };
+  write('koffie'); write('brood');
+  const line = text => M.entries.find(e => e.text === text), row = l => `.ln[data-id="${l.id}"]`;
+  const eggs = line('6 eieren'); tap(row(eggs)); eggs.crossed = true; hold(6);
+  tap(row(avocado)); avocado.gone = true; hold(3);
+  M.entries.splice(M.entries.indexOf(avocado), 1); recompute(); hold(2);
+  write('hagelslag'); hold(4);
 }
 
 /* ================= rendering ================= */
@@ -647,6 +656,7 @@ function lineEl(l) {
   }
   const tx = el.querySelector('.tx'), gh = el.querySelector('.ghost'), tg = el.querySelector('.tag'), pr = el.querySelector('.pr');
   if (tx.textContent !== l.text) tx.textContent = l.text;
+  el.classList.toggle('crossed', !!l.crossed); el.classList.toggle('gone', !!l.gone);
   const done = l.status === 'done';
   const ghost = done && l.res?.ghost ? l.res.ghost : '';
   if (gh.textContent !== ghost) { gh.textContent = ghost; gh.classList.toggle('in', !!ghost && animate); }
@@ -888,7 +898,7 @@ show.frame = f => {
 const TARGET = {list: '.seg i:first-child', title: '#goalbtn', rec: '.rec .rt', bag: '.seg i:last-child', ah: '.pv-store[data-st="ah"] .pv-st'};
 function press(what) {
   $$('.device .tap').forEach(el => el.classList.remove('tap'));
-  if (what) $(TARGET[what])?.classList.add('tap');
+  if (what) $(TARGET[what] || what)?.classList.add('tap');
 }
 
 /* ================= each section plays its part, and you move on when it has ================= */
