@@ -55,6 +55,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .pill.gone{opacity:0;transform:translateY(8px);pointer-events:none}
 .nudge{position:fixed;z-index:10;left:max(var(--gutter),calc((100vw - 1120px)/2));bottom:calc(24px + env(safe-area-inset-bottom))}
 .ch p i{font-style:normal;color:var(--label)}
+.hint{display:none}
 /* the supported supermarkets: a quiet line, not a feature */
 .ch p.stores{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:14px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2)}
 .stores span{display:inline-flex;align-items:center;gap:6px}
@@ -259,6 +260,14 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   .ch.on .copy{opacity:1;transform:none;pointer-events:auto;transition:opacity .35s .12s,transform .6s .12s var(--out)}
   .ch p{margin-inline:auto;max-width:25em}
   .ch p.stores{justify-content:center;margin-top:10px;font-size:14px}
+  /* the first time only: the lede makes way for a nudge to scroll on */
+  .hero .sub{display:grid;place-items:center;margin-top:16px}
+  .hero .sub>*{grid-area:1 / 1}
+  .hero .lede{margin-top:0;transition:opacity .2s,transform .35s var(--ease)}
+  .hint{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:16px;line-height:20px;font-weight:600;letter-spacing:-.3px;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .35s var(--ease)}
+  .hint svg{width:22px;height:22px;animation:bob 1.6s ease-in-out infinite}
+  .hinted .hero .lede{opacity:0;transform:translateY(-10px)}
+  .hinted .hint{opacity:1;transform:none;transition:opacity .35s .15s,transform .6s .15s var(--out)}
   /* the close: the phone shrinks until it is whole, the words sit under it and the footer comes up */
   .ch.end .copy{top:var(--ft);height:auto;justify-content:flex-start}
   .ch.end p{text-wrap:balance}
@@ -285,6 +294,8 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   h2{font-size:28px}
   h1{font-size:32px;line-height:36px}
   .lede,.ch p{font-size:16px;line-height:22px;letter-spacing:-.25px;margin-top:10px}
+  .hero .sub{margin-top:10px}
+  .hero .lede{margin-top:0}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0s !important;animation-iteration-count:1 !important;transition-duration:0s !important}
@@ -301,7 +312,10 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   <section class="ch hero on" data-scene="0" aria-labelledby="kop">
     <div class="copy">
       <h1 id="kop">Je boodschappenlijst, <span>altijd geoptimaliseerd.</span></h1>
-      <p class="lede">Schrijf je lijst zoals in Notities. Tjapp zoekt bij elke regel het beste mandje.</p>
+      <div class="sub">
+        <p class="lede">Schrijf je lijst zoals in Notities. Tjapp zoekt bij elke regel het beste mandje.</p>
+        <button class="hint" id="hint" type="button" inert>scroll :)<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
+      </div>
     </div>
   </section>
 
@@ -585,7 +599,7 @@ function build() {
   // 2 · a recipe from a few words, on the cheapest goal again
   chapter = 2;
   S.goal = 'goedkoopst'; recompute(); ui.scroll = 'end';
-  hold(.5); typeIn('kip gerecht met veeeeel prote', .1); typeIn('ine :)', .4); hold(.8);
+  hold(1.5); typeIn('kip gerecht met veeeeel prote', .1); typeIn('ine :)', .4); hold(.8);
   const ask = commit(); hold(2);
   const rec = makeRecipe(recipe('pienlaathaaretenzien-432'));
   M.entries.splice(M.entries.indexOf(ask), 1, rec);
@@ -605,7 +619,7 @@ function build() {
 
   // 4 · the close: back to the list, the caret waits for you
   chapter = 4;
-  hold(2.5); tap('list'); ui.view = 'list'; hold(4);
+  hold(.1); tap('list'); ui.view = 'list'; hold(4);
 }
 
 /* ================= rendering ================= */
@@ -878,7 +892,7 @@ function press(what) {
 }
 
 /* ================= each section plays its part, and you move on when it has ================= */
-const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge');
+const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge'), hint = $('#hint');
 const stacked = () => matchMedia('(max-width:900px)').matches;
 const TICK = 200;                                // ms per unit of frame weight
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -910,14 +924,26 @@ async function playPart(c) {
     if (token !== play.token) return;
   }
   play.busy = false; updateNudge();
+  partDone(c);
+}
+
+// stacked, the first part ends with a nudge to scroll on, once: it never comes back after you scrolled
+let scrolledOn = false;
+function partDone(c) {
+  if (c || scrolledOn || !stacked()) return;
+  setTimeout(() => {
+    if (play.at || scrolledOn) return;
+    document.body.classList.add('hinted'); hint.inert = false;
+  }, 1200);
 }
 
 function enter(c) {
   if (c === play.at) return;
   play.at = c; play.token++; play.busy = false;
+  if (c) { scrolledOn = true; document.body.classList.remove('hinted'); hint.inert = true; }
   chapters.forEach((el, i) => { el.classList.toggle('on', i === c); el.classList.toggle('past', i < c); });
   document.body.classList.toggle('fin', c === chapters.length - 1);
-  if (calm()) show(lastOf(c));
+  if (calm()) { show(lastOf(c)); partDone(c); }
   else playPart(c);                              // scrolling away stops it; the next section plays its own part
   updateNudge();
 }
@@ -927,7 +953,9 @@ function updateNudge() {
   const last = chapters.length - 1;
   nudge.classList.toggle('gone', play.busy || play.at >= last);
 }
-nudge.addEventListener('click', () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'}));
+const next = () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'});
+nudge.addEventListener('click', next);
+hint.addEventListener('click', next);
 
 let ticking = false;
 function onScroll() {
