@@ -622,12 +622,12 @@ function build() {
   chapter = 4;
   hold(.1); tap('list'); ui.view = 'list'; hold(2);
   ui.scroll = 'end';
-  const write = (text, w = .3) => { typeIn(text, w); hold(.5); const l = commit(); hold(2); land(l); hold(1.2); };
-  write('koffie'); write('brood');
-  const line = text => M.entries.find(e => e.text === text), row = l => `.ln[data-id="${l.id}"]`;
-  const eggs = line('6 eieren'); tap(row(eggs)); eggs.crossed = true; hold(6);
-  tap(row(avocado)); avocado.gone = true; hold(3);
-  M.entries.splice(M.entries.indexOf(avocado), 1); recompute(); hold(2);
+  const write = (text, w = .3) => { typeIn(text, w); hold(.5); const l = commit(); hold(2); land(l); hold(1.2); return l; };
+  const row = l => `.ln[data-id="${l.id}"]`;
+  const pb = write('pindakaas'), bread = write('brood');
+  tap(row(pb)); pb.crossed = true; hold(6);
+  tap(row(bread)); bread.gone = true; hold(3);
+  M.entries.splice(M.entries.indexOf(bread), 1); recompute(); hold(2);
   write('hagelslag'); hold(4);
 }
 
