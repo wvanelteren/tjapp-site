@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tjapp: een boodschappenlijst die zelf rekent</title>
-<meta name="description" content="Schrijf je boodschappen zoals in Notities. Tjapp kiest de producten, vult de hoeveelheden in en zoekt het goedkoopste mandje, bij meerdere supermarkten. Binnenkort in de App Store.">
+<title>Tjapp: je boodschappenlijst, altijd geoptimaliseerd</title>
+<meta name="description" content="Schrijf je boodschappen zoals in Notities. Bij elke regel zoekt Tjapp opnieuw het beste mandje: het goedkoopst, het minst bewerkt of het voedzaamst, bij meerdere supermarkten. Binnenkort in de App Store.">
 <meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1C1E'/%3E%3Cpath d='M16 42h32' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 22h18M16 31h14' stroke='%23fff' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M42 22h6M44 31h4' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
@@ -30,10 +30,9 @@ svg{display:block}
 /* ---------- top bar ---------- */
 .top{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 max(var(--gutter),calc((100vw - 1120px)/2))}
 .wm{font:700 22px/1 var(--display);letter-spacing:-.3px;text-decoration:none}
-.store{display:inline-flex;gap:5px;height:32px;align-items:center;padding:0 14px;border-radius:16px;background:var(--fill);font-size:15px;letter-spacing:-.24px;color:var(--l2);white-space:nowrap;cursor:default}
+/* the one call to action, at the close */
+.store{display:inline-flex;gap:5px;height:44px;align-items:center;padding:0 18px;border-radius:22px;background:var(--fill);font-size:17px;letter-spacing:-.24px;color:var(--l2);white-space:nowrap;cursor:default}
 .store b{color:var(--label);font-weight:600}
-.store.big{height:44px;padding:0 18px;border-radius:22px;font-size:17px}
-.top .store{visibility:hidden}
 
 /* ---------- story: chapters scroll, the phone stays ---------- */
 .story{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:72px;max-width:calc(1120px + 2 * var(--gutter));margin:0 auto;padding:0 var(--gutter)}
@@ -50,23 +49,37 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .lede,.ch p{margin-top:16px;max-width:30em;font-size:19px;line-height:27px;letter-spacing:-.3px;color:var(--read);text-wrap:pretty}
 .ch p b{color:var(--label);font-weight:600}
 .ch p q{color:var(--label);quotes:"‘" "’"}
-.hero .store.big{margin-top:32px;align-self:flex-start}
+.ch .store{margin-top:32px;align-self:flex-start}
 .pill{display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 20px;border-radius:22px;background:var(--label);color:var(--bg);box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:16px;font-weight:600;letter-spacing:-.3px;transition:opacity .3s,transform .3s var(--ease)}
 .pill svg{width:18px;height:18px;animation:bob 1.6s ease-in-out infinite}
 .pill.gone{opacity:0;transform:translateY(8px);pointer-events:none}
 .nudge{position:fixed;z-index:10;left:max(var(--gutter),calc((100vw - 1120px)/2));bottom:calc(24px + env(safe-area-inset-bottom))}
-.up{align-self:flex-start;margin-top:32px}
-.up svg{animation-name:bobup}
+.ch p i{font-style:normal;color:var(--label)}
+/* the supported supermarkets: a quiet line, not a feature */
+.ch p.stores{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:14px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2)}
+.stores span{display:inline-flex;align-items:center;gap:6px}
+.stores img{width:18px;height:18px}
+.stores img[src*="jumbo"]{border-radius:4px}
+.stores span:last-child{color:var(--l3)}
 @keyframes bob{50%{transform:translateY(3px)}}
-@keyframes bobup{50%{transform:translateY(-3px)}}
+
+/* ---------- the close: the page ends the way the note does, on a rule with a "+" ---------- */
+.foot{position:relative;display:flex;align-items:center;justify-content:space-between;width:min(1120px,100% - 2 * var(--gutter));margin:48px auto 0;padding:22px 0 calc(14px + env(safe-area-inset-bottom));font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);scroll-snap-align:end}
+.foot::before{content:"";position:absolute;left:0;right:26px;top:0;height:1.5px;background:var(--label)}
+.foot::after{content:"+";position:absolute;right:0;top:-11px;font:500 24px/24px var(--text);color:var(--label)}
+.ch.end h2 span{white-space:nowrap}
+.social{display:flex;margin-right:-12px}
+.social a{display:grid;place-items:center;width:44px;height:44px;border-radius:22px;color:var(--l2);transition:color .2s}
+.social a:hover{color:var(--label)}
+.social svg{width:20px;height:20px}
 
 
-.stage{grid-column:2;grid-row:1 / span 4;align-self:start;position:sticky;top:calc(50svh - 437px * var(--s));width:calc(415px * var(--s));margin-top:calc(50svh - 64px - 437px * var(--s))}
+.stage{grid-column:2;grid-row:1 / span 5;align-self:start;position:sticky;top:calc(50svh - 437px * var(--s));width:calc(415px * var(--s));margin-top:calc(50svh - 64px - 437px * var(--s))}
 .frame{height:calc(874px * var(--s))}
 .device{position:relative;width:415px;height:874px;transform:scale(var(--s));transform-origin:0 0;border-radius:56px;border:11px solid var(--bezel);background:var(--bg);overflow:hidden;box-shadow:0 40px 80px -20px var(--shadow),0 12px 24px -12px var(--shadow)}
 .chrome{position:absolute;left:0;right:0;top:0;z-index:6;background:var(--bg)}
 .screen{position:absolute;inset:98px 0 0;display:flex;flex-direction:column;padding:0 20px}
-.pane{flex:1;min-height:0;overflow:hidden}
+.pane{flex:0 1 auto;min-height:0;overflow:hidden}   /* the sum sits under the list and only pins once the list fills the screen */
 .status{display:flex;justify-content:space-between;align-items:center;height:54px;padding:6px 30px 0 34px;font:600 16px/1 var(--text);letter-spacing:-.3px}
 .island{position:absolute;left:50%;top:10px;width:112px;height:32px;margin-left:-56px;border-radius:18px;background:#000}
 .status .ic{display:flex;gap:5px;align-items:center}
@@ -154,7 +167,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .sum .left:empty{opacity:0}
 
 /* ---------- goal menu ---------- */
-.menu{position:absolute;left:20px;top:176px;z-index:9;width:262px;border-radius:14px;background:var(--menu);box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px var(--sep);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;transform-origin:18% 0;transform:scale(.6);opacity:0;pointer-events:none;transition:transform .32s var(--ease),opacity .2s}
+.menu{position:absolute;left:20px;top:176px;z-index:9;width:276px;border-radius:14px;background:var(--menu);box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px var(--sep);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;transform-origin:18% 0;transform:scale(.6);opacity:0;pointer-events:none;transition:transform .32s var(--ease),opacity .2s}
 .menu.open{transform:none;opacity:1;pointer-events:auto}
 .mi{display:grid;grid-template-columns:22px 1fr;column-gap:8px;width:100%;padding:10px 14px 10px 12px;border-top:.5px solid var(--sep)}
 .mi:first-child{border-top:0}
@@ -165,6 +178,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .mi.hot{background:var(--fill)}
 .mi[disabled]{color:var(--l3);cursor:default}
 .mi[disabled] small{color:var(--l3)}
+.mi em{font-style:normal;font-size:12px;letter-spacing:-.05px;color:var(--l2);background:var(--fill);border-radius:8px;padding:1px 7px;margin-left:4px;vertical-align:1px}
 
 /* ---------- products view (the list as a basket per supermarket) ---------- */
 .prods{display:none}
@@ -236,28 +250,40 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
   :root{--top-h:64px}
   .top{position:fixed;inset:0 0 auto;z-index:8;height:var(--top-h);background:var(--bg)}
   .top::after{content:"";position:absolute;inset:100% 0 auto;height:16px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
-  .top .store{visibility:visible}
-  .hero .store.big{display:none}
   .story{display:block;max-width:calc(680px + 2 * var(--gutter))}
   .ch,.ch.hero{height:100vh;min-height:0;max-width:none;justify-content:flex-start;padding:0;scroll-margin-top:0}
-  /* every heading starts at the same height under the top bar; spare room falls above the phone */
-  .copy{padding-top:calc(var(--top-h) + 20px)}
+  /* the sections are only scroll stops; the words sit centred between the top bar and the phone and change in place */
+  .ch .copy{position:fixed;z-index:6;left:0;right:0;top:var(--top-h);height:calc(var(--pt) - var(--top-h));padding:0 var(--gutter);align-items:center;justify-content:center;text-align:center;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .2s,transform .35s var(--ease)}
+  .ch.past .copy{transform:translateY(-16px)}
+  .ch.on .copy{opacity:1;transform:none;pointer-events:auto;transition:opacity .35s .12s,transform .6s .12s var(--out)}
+  .ch p{margin-inline:auto;max-width:25em}
+  .ch p.stores{justify-content:center;margin-top:10px;font-size:14px}
+  /* the close: the phone shrinks until it is whole, the words sit under it and the footer comes up */
+  .ch.end .copy{top:var(--ft);height:auto;justify-content:flex-start}
+  .ch.end p{text-wrap:balance}
+  .ch.end .store{align-self:center;margin-top:20px}
+  .stage,.frame{transition:transform .6s var(--ease)}
+  .frame{transform-origin:50% 0}
+  .fin .stage{transform:translateY(var(--fy))}
+  .fin .frame{transform:scale(var(--fk))}
+  .fin .device.crop .screen{bottom:0}
+  .foot{position:fixed;z-index:7;inset:auto var(--gutter) 0;width:auto;margin:0;background:var(--bg);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .35s var(--ease)}
+  .fin .foot{opacity:1;transform:none;pointer-events:auto;transition:opacity .35s .2s,transform .6s .2s var(--out)}
   /* the words fade out behind the phone; the stage clips the phone at the bottom edge */
   .stage{position:fixed;z-index:5;inset:calc(var(--pt) - 24px) 0 0;align-self:stretch;width:auto;margin:0;padding-top:24px;overflow:hidden;background:linear-gradient(transparent,var(--bg) 24px);display:flex;justify-content:center}
   .frame{width:calc(415px * var(--s))}
   /* the phone runs off the bottom edge: a short list keeps its sum in view, a long one pushes it to the real bottom */
   .device.crop .screen{bottom:calc(var(--cut) + env(safe-area-inset-bottom) / var(--s))}
   .device.crop.tall .screen{bottom:0}
-  .device.crop.tall .note{padding-bottom:max(0px,calc(var(--cut) - 80px))}   /* so the newest line can still scroll into view */
   /* no scroll hint here: it would sit on the phone */
-  .pill.nudge,.pill.up{display:none}
+  .pill.nudge{display:none}
 }
 @media (max-width:600px){
   :root{--gutter:16px;--top-h:56px}
-  h1{font-size:34px;line-height:38px;letter-spacing:-.02em}
+  h1{letter-spacing:-.02em}
   h2{font-size:28px}
-  .lede,.ch p{font-size:17px;line-height:24px;margin-top:10px}
-  .top .store{font-size:13px;padding:0 11px;height:30px}
+  h1{font-size:32px;line-height:36px}
+  .lede,.ch p{font-size:16px;line-height:22px;letter-spacing:-.25px;margin-top:10px}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0s !important;animation-iteration-count:1 !important;transition-duration:0s !important}
@@ -268,15 +294,13 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 <body>
 <header class="top">
   <a class="wm" href="/" aria-label="Tjapp, home">Tjapp</a>
-  <span class="store" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
 </header>
 
 <main class="story">
-  <section class="ch hero" data-scene="0" aria-labelledby="kop">
+  <section class="ch hero on" data-scene="0" aria-labelledby="kop">
     <div class="copy">
-      <h1 id="kop">Een boodschappenlijst <span>die zelf rekent.</span></h1>
-      <p class="lede">Schrijf je lijst zoals in Notities. Tjapp kiest bij elke regel het juiste product, vult de hoeveelheid in en zoekt het goedkoopste mandje, bij meerdere supermarkten.</p>
-      <span class="store big" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
+      <h1 id="kop">Je boodschappenlijst, <span>altijd geoptimaliseerd.</span></h1>
+      <p class="lede">Schrijf je lijst zoals in Notities. Tjapp zoekt bij elke regel het beste mandje.</p>
     </div>
   </section>
 
@@ -306,8 +330,9 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 
       <div class="menu" id="menu" role="menu" aria-label="Doel">
         <button class="mi on" role="menuitemradio" data-goal="goedkoopst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Goedkoopste</b><small>Het laagste bedrag aan de kassa</small></button>
-        <button class="mi" role="menuitemradio" data-goal="bewerkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Minder bewerkt</b><small>Minder additieven, meer biologisch</small></button>
-        <button class="mi" role="menuitemradio" disabled><svg viewBox="0 0 24 24"></svg><b>Gezondst</b><small>Binnenkort</small></button>
+        <button class="mi" role="menuitemradio" data-goal="bewerkt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Minst bewerkt</b><small>Minder additieven, meer biologisch</small></button>
+        <button class="mi" role="menuitemradio" data-goal="voedzaam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>Voedzaamst</b><small>De hoogste Nutri-Score</small></button>
+        <button class="mi" role="menuitemradio" disabled><svg viewBox="0 0 24 24"></svg><b>Duurzaamst <em>binnenkort</em></b><small>Minder CO₂, meer plantaardig</small></button>
       </div>
       <div class="rpage" id="rpage"></div>
 
@@ -316,20 +341,35 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 
   <section class="ch" data-scene="1" aria-labelledby="h-doel"><div class="copy">
     <h2 id="h-doel">Niet alleen <span>de goedkoopste.</span></h2>
-    <p>Tik op de titel en kies waar je op let. Wat je ook kiest, Tjapp zoekt altijd het goedkoopste mandje dat erbij past, met zo min mogelijk restjes.</p>
+    <p>Kies <i>goedkoopst</i>, <i>minst bewerkt</i> of <i>voedzaamst</i>. <i>Duurzaamst</i> volgt binnenkort.</p>
   </div></section>
 
   <section class="ch" data-scene="2" aria-labelledby="h-zin"><div class="copy">
     <h2 id="h-zin">Typ waar je zin in hebt.</h2>
-    <p>Typ <q>kip gerecht met veel proteïne</q> en Tjapp zet een recept van een echte receptenmaker in je lijst. Tik erop en je ziet per ingrediënt welk product het wordt en wat je ervan gebruikt.</p>
+    <p>Tjapp vindt er een populair recept bij, met de macro’s per persoon.</p>
   </div></section>
 
   <section class="ch" data-scene="3" aria-labelledby="h-winkels"><div class="copy">
     <h2 id="h-winkels">Eén lijst, <span>elke supermarkt.</span></h2>
-    <p>Tik op het tasje en je lijst wordt een mandje met echte producten. Tjapp rekent het uit bij meerdere supermarkten en zet de goedkoopste bovenaan. Tik op een supermarkt om zijn mandje te zien.</p>
-    <button class="pill up gone" id="up" type="button">Scroll naar boven<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+    <p>Tjapp zet de goedkoopste supermarkt bovenaan.</p>
+    <p class="stores"><span><img src="logos/ah.png" alt="">Albert Heijn</span><span><img src="logos/jumbo.png" alt="">Jumbo</span><span>meer volgt</span></p>
+  </div></section>
+
+  <section class="ch end" data-scene="4" aria-labelledby="h-eind"><div class="copy">
+    <h2 id="h-eind">Jij schrijft. <span>Tjapp doet de rest.</span></h2>
+    <p>Altijd het beste mandje, zonder zelf te vergelijken.</p>
+    <span class="store" aria-disabled="true">Binnenkort in de <b>App Store</b></span>
   </div></section>
 </main>
+
+<footer class="foot">
+  <small>© 2026 Tjapp</small>
+  <nav class="social" aria-label="Tjapp op sociale media">
+    <!-- TODO: de echte accounts -->
+    <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r=".6" fill="currentColor"/></svg></a>
+    <a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5v11.25a3.75 3.75 0 1 1-3.75-3.75"/><path d="M13.5 3.5c.4 2.6 2.3 4.5 5 4.75"/></svg></a>
+  </nav>
+</footer>
 
 <button class="pill nudge gone" id="nudge" type="button">Scroll en kijk mee<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
 
@@ -353,7 +393,7 @@ const recipe = id => RECIPES.find(r => r.id === id);
 
 /* ================= settings ================= */
 const S = {goal: 'goedkoopst', people: 2};
-const GOAL_WORD = {goedkoopst: 'Goedkoopste', bewerkt: 'Minder bewerkte'};
+const GOAL_WORD = {goedkoopst: 'Goedkoopste', bewerkt: 'Minst bewerkte'};
 const STORES = ['ah', 'jumbo'], STORE_NAME = {ah: 'Albert Heijn', jumbo: 'Jumbo'};
 // shelves in store-walk order, as in the app's products view
 const AISLE = ['Groente', 'Fruit', 'Brood', 'Vlees', 'Vleeswaren', 'Kaas', 'Zuivel', 'Eieren'];
@@ -533,7 +573,7 @@ function build() {
 
   // 1 · another goal: the same list, other products
   chapter = 1; ui.scroll = 'top';
-  hold(1.5); tap('title'); ui.menu = true; hold(4);
+  hold(1.5); tap('title'); ui.menu = true; hold(9);
   ui.hot = 'bewerkt'; hold(2);
   S.goal = 'bewerkt'; recompute(); ui.hot = null; ui.menu = false; hold(8);
 
@@ -550,14 +590,17 @@ function build() {
   for (const l of rec.lines) { land(l); hold(.3); }
   hold(4);
   rec.open = false; ui.scroll = 'top'; hold(2);
-  tap('rec'); ui.page = 'recipe'; hold(5);
-  tap('bag'); ui.pageView = 'products'; hold(6);
+  tap('rec'); ui.page = 'recipe'; hold(6);
 
   // 3 · the products, per supermarket: every basket open, then Albert Heijn folds
   chapter = 3;
   ui.page = null; ui.pageView = 'list'; hold(1.5);
   tap('bag'); ui.view = 'products'; hold(8);
   tap('ah'); ui.open = ['jumbo']; hold(8);
+
+  // 4 · the close: back to the list, the caret waits for you
+  chapter = 4;
+  hold(2.5); tap('list'); ui.view = 'list'; hold(4);
 }
 
 /* ================= rendering ================= */
@@ -754,6 +797,12 @@ function setView(view) {
 }
 
 // the phone's own screen follows the list: to the newest line or back to the title
+// the sum steps down with each new line instead of jumping
+function settle(el, was) {
+  const dy = was - el.offsetTop;
+  if (dy && animate && !calm()) el.animate([{transform: `translateY(${dy}px)`}, {transform: 'none'}], {duration: 340, easing: 'cubic-bezier(.16,1,.3,1)'});
+}
+
 function follow(where, page) {
   const box = page ? rpage.querySelector('.pane') : pane;
   const top = () => where === 'end' ? box.scrollHeight : 0;
@@ -805,24 +854,26 @@ show.frame = f => {
     clearTimeout(show.t); show.t = setTimeout(() => entryEl.classList.remove('typing'), 500);
   }
   device.classList.toggle('tall', f.ui.tall);
+  const y = sumEl.offsetTop;
   render(); renderProducts(); openStores(f.ui.open); setView(f.ui.view); setPage(f.ui.page, f.ui.pageView);
+  settle(sumEl, y);
   const shop = (f.ui.page ? f.ui.pageView : f.ui.view) === 'products';
   $$('.seg i').forEach((i, k) => i.classList.toggle('on', k === +shop));
   openMenu(f.ui.menu);
   $$('.mi[data-goal]').forEach(m => m.classList.toggle('hot', m.dataset.goal === f.ui.hot));
   press(f.ui.tap);
-  follow(f.ui.scroll, f.ui.page);
+  follow(f.ch === 2 && device.classList.contains('crop') ? 'top' : f.ui.scroll, f.ui.page);
 };
 
 // what the demo taps dims for a moment
-const TARGET = {title: '#goalbtn', rec: '.rec .rt', bag: '.seg i:last-child', ah: '.pv-store[data-st="ah"] .pv-st'};
+const TARGET = {list: '.seg i:first-child', title: '#goalbtn', rec: '.rec .rt', bag: '.seg i:last-child', ah: '.pv-store[data-st="ah"] .pv-st'};
 function press(what) {
   $$('.device .tap').forEach(el => el.classList.remove('tap'));
   if (what) $(TARGET[what])?.classList.add('tap');
 }
 
 /* ================= each section plays its part, and you move on when it has ================= */
-const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge'), up = $('#up');
+const chapters = $$('.ch'), stage = $('.stage'), story = $('.story'), nudge = $('#nudge');
 const stacked = () => matchMedia('(max-width:900px)').matches;
 const TICK = 200;                                // ms per unit of frame weight
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -859,6 +910,8 @@ async function playPart(c) {
 function enter(c) {
   if (c === play.at) return;
   play.at = c; play.token++; play.busy = false;
+  chapters.forEach((el, i) => { el.classList.toggle('on', i === c); el.classList.toggle('past', i < c); });
+  document.body.classList.toggle('fin', c === chapters.length - 1);
   if (calm()) show(lastOf(c));
   else playPart(c);                              // scrolling away stops it; the next section plays its own part
   updateNudge();
@@ -868,10 +921,8 @@ function updateNudge() {
   nudge.firstChild.textContent = play.at ? 'Scroll verder' : 'Scroll en kijk mee';
   const last = chapters.length - 1;
   nudge.classList.toggle('gone', play.busy || play.at >= last);
-  up.classList.toggle('gone', play.busy || play.at < last);
 }
 nudge.addEventListener('click', () => scrollTo({top: snapY(play.at + 1), behavior: calm() ? 'auto' : 'smooth'}));
-up.addEventListener('click', () => scrollTo({top: 0, behavior: calm() ? 'auto' : 'smooth'}));
 
 let ticking = false;
 function onScroll() {
@@ -891,10 +942,23 @@ function fitPhone() {
     // the words take the top, sized for the longest section; the phone takes most of the width and the rest
     // of the height, shrinking further when that would leave too little of the list in view
     const room = story.clientWidth - 2 * parseFloat(getComputedStyle(story).paddingLeft);
-    const pt = Math.max(...chapters.map(c => c.querySelector('.copy').offsetHeight)) + 32;
+    // the band between the top bar and the phone fits the longest section's words
+    const words = c => {
+      const k = [...c.querySelector('.copy').children].filter(e => e.getClientRects().length);
+      return k.at(-1).offsetTop + k.at(-1).offsetHeight - k[0].offsetTop;
+    };
+    const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h'));
+    const pt = top + Math.max(...chapters.slice(0, -1).map(words)) + 2 * 32;   // equal room above and below
     s = Math.min(1, room * .82 / W, (innerHeight - pt) / 440);
     view = Math.min(H, (innerHeight - pt) / s);
     root.setProperty('--pt', `${pt}px`);
+    // the close: the whole phone, then its words, centred between the top bar and the footer
+    const room2 = innerHeight - top - $('.foot').offsetHeight, words2 = $('.ch.end .copy').offsetHeight, gap = 28;
+    const tall = Math.min(H * s, room2 - words2 - gap - 2 * 24);
+    const y = top + (room2 - tall - gap - words2) / 2;
+    root.setProperty('--fy', `${(y - pt).toFixed(1)}px`);
+    root.setProperty('--fk', (tall / (H * s)).toFixed(3));
+    root.setProperty('--ft', `${(y + tall + gap).toFixed(1)}px`);
   }
   root.setProperty('--s', s.toFixed(3));
   stage.style.setProperty('--cut', `${(H - view).toFixed(1)}px`);
@@ -906,7 +970,7 @@ addEventListener('resize', () => { fitPhone(); updateNudge(); onScroll(); });
 build(); index(); fitPhone();
 show(0);
 animate = true;
-enter(current());
+check();
 </script>
 </body>
 </html>
