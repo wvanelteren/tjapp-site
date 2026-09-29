@@ -574,12 +574,13 @@ function build() {
 
   // 1 · another goal: the same list, other products
   chapter = 1; ui.scroll = 'top';
-  hold(1.5); tap('title'); ui.menu = true; hold(9);
-  ui.hot = 'bewerkt'; hold(2);
-  S.goal = 'bewerkt'; recompute(); ui.hot = null; ui.menu = false; hold(8);
-  tap('title'); ui.menu = true; hold(5);
-  ui.hot = 'voedzaam'; hold(2);
-  S.goal = 'voedzaam'; recompute(); ui.hot = null; ui.menu = false; hold(8);
+  // each goal is picked the same way: the menu shows, the goal lights up, the list follows
+  const pickGoal = goal => {
+    tap('title'); ui.menu = true; hold(7);
+    ui.hot = goal; hold(2);
+    S.goal = goal; recompute(); ui.hot = null; ui.menu = false; hold(6);
+  };
+  hold(1.5); pickGoal('bewerkt'); pickGoal('voedzaam');
 
   // 2 · a recipe from a few words, on the cheapest goal again
   chapter = 2;
