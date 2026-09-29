@@ -576,7 +576,7 @@ function build() {
   chapter = 1; ui.scroll = 'top';
   // each goal is picked the same way: the menu shows, the goal lights up, the list follows
   const pickGoal = goal => {
-    tap('title'); ui.menu = true; hold(7);
+    tap('title'); ui.menu = true; hold(4);
     ui.hot = goal; hold(2);
     S.goal = goal; recompute(); ui.hot = null; ui.menu = false; hold(6);
   };
