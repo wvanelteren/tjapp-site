@@ -99,7 +99,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .note{position:relative}
 .ntitle{display:block;width:100%;text-align:left;font:700 28px/34px var(--display);letter-spacing:.36px;padding:4px 0 6px;border-radius:8px;white-space:nowrap}
 .ntitle span{color:var(--l3)}
-.ntitle svg{display:inline-block;width:18px;height:18px;color:var(--l3);vertical-align:-1px;margin-left:4px}
+.ntitle svg{display:inline-block;width:18px;height:18px;color:var(--l3);vertical-align:-1px;margin-left:2px}
 .ln{position:relative;display:flex;align-items:flex-start;gap:12px;min-height:var(--row);padding:11px 0;touch-action:pan-y}
 .tw{flex:1;min-width:0;overflow-wrap:anywhere}
 .tx{outline:none;caret-color:var(--graphite)}
@@ -188,7 +188,7 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .note.shop .prods{display:block}
 .note.shop #lines,.note.shop .entry{display:none}
 .pv-st{display:grid;grid-template-columns:1fr auto;align-items:baseline;row-gap:1px;padding:18px 0 8px;font-size:20px;line-height:25px;font-weight:600;letter-spacing:.38px}
-.pv-store:first-child .pv-st{padding-top:4px}
+.pv-store:first-child .pv-st{padding-top:18px}
 .pv-st .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0}
 .pv-st.lose .v{color:var(--l2)}
 .pv-sn{display:flex;align-items:center;gap:6px}
@@ -235,7 +235,11 @@ h2{font:700 clamp(32px,3.2vw,40px)/1.1 var(--display);letter-spacing:-.02em;text
 .rp .rby{padding-top:4px}
 .rp-m{margin-top:10px;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--l2)}
 .rp-m b{color:var(--label);font-weight:600}
-.rp .pv-sh{padding-top:14px}
+.mcap:empty{padding-top:4px}
+.rhint{font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--l2);padding-top:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rhint .u{color:var(--label);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;text-decoration-color:var(--l3)}
+.rp-list{margin-top:2px}
+#rpage.shop>.sum{display:none}
 .mac{display:grid;grid-template-columns:repeat(4,1fr);padding:12px 0 2px}
 .mac div{display:flex;flex-direction:column}
 .mac b{font:700 22px/28px var(--display);letter-spacing:.2px;font-variant-numeric:tabular-nums}
@@ -799,11 +803,30 @@ function recipePageHTML() {
   const nu = done.reduce((t, l) => nutrients(l, buys[l.res.food]?.items[0]).map((x, i) => t[i] + x), [0, 0, 0, 0]);
   let h = `<div class="pane rp"><div class="rp-t">${esc(r.title)}</div><div class="rby"><span class="au">${esc(r.author)}</span>·<span class="lnk">Instagram${ICON.ext}</span></div>`
     + `<div class="rp-m">Voor ${S.people} personen · <b>${eur(sum / S.people)}</b> per persoon</div>`
-    + macrosHTML(nu.map(x => x / S.people), 'Per persoon') + '<div class="pv-sh">Ingrediënten</div><div class="rp-list">';
+    + macrosHTML(nu.map(x => x / S.people), '')
+    + `<div class="rhint">Op basis van <span class="u">${GOAL_WORD[S.goal].toLowerCase()}</span> mandje bij <span class="u">${STORE_NAME[M.baskets[0].st]}</span></div><div class="rp-list">`;
   r.lines.forEach(l => { h += `<div class="ln"><span class="tw"><span class="tx">${esc(l.text)}</span></span><span class="pr">${priceHTML(l, '')}</span></div>`; });
-  h += '</div><div class="rp-prods">';
-  r.lines.forEach((l, i) => { h += rowHTML(`r:${l.id}`, i, buys[l.res?.food]?.items[0], l.text, l.share || 0); });
-  return h + `</div></div><div class="sum"><div class="row"><span>Totaal</span><span class="t">${eur(sum)}</span></div></div>`;
+  return h + `</div><div class="rp-prods">${recipeStoresHTML(r)}` + `</div></div><div class="sum"><div class="row"><span>Totaal</span><span class="t">${eur(sum)}</span></div></div>`;
+}
+
+// the recipe's products, per supermarket: its share of each basket, cheapest first, a store missing something last
+function recipeStoresHTML(r) {
+  const need = {};
+  for (const l of r.lines) if (l.status === 'done') need[l.res.food] = (need[l.res.food] || 0) + l.res.need;
+  const bks = M.baskets.map(bk => {
+    const rows = bk.buys.filter(b => need[b.food]).map(b => ({b, cost: Math.round(b.cost * need[b.food] / b.got * 100) / 100}));
+    return {st: bk.st, rows, total: rows.reduce((s, x) => s + x.cost, 0), miss: Object.keys(need).length - rows.length};
+  }).sort((a, b) => (a.miss - b.miss) || (a.total - b.total));
+  return bks.map((bk, k) => {
+    const n = `${bk.rows.length} producten`;
+    const sub = !k ? `Goedkoopst · ${n}` : bk.miss ? `Mist ${bk.miss} · ${n}` : `${eur(bk.total - bks[0].total)} duurder · ${n}`;
+    const rows = bk.rows.map(({b, cost}, i) => {
+      const u = FOODS[b.food].u, packs = b.items.map(x => `${x.c > 1 ? x.c + ' × ' : ''}${qty(x.s, u)}`).join(' + ');
+      const lines = r.lines.filter(l => l.res?.food === b.food).map(l => l.text).join(', ');
+      return rowHTML(`r:${bk.st}:${b.food}`, i, b.items[0], `${packs} · ${lines}`, cost);
+    }).join('');
+    return `<div class="pv-store" data-st="${bk.st}" data-open="${!k}"><div class="pv-st${k ? ' lose' : ''}"><span class="pv-sn">${STORE_NAME[bk.st]}${ICON.chev}</span><span class="v">${eur(bk.total)}</span><small class="pv-ss">${sub}</small></div><div class="pv-body"><div>${rows}</div></div></div>`;
+  }).join('');
 }
 
 // the recipe page keeps the switch and opens on its list, whatever the list behind it shows
@@ -883,9 +906,10 @@ show.frame = f => {
     clearTimeout(show.t); show.t = setTimeout(() => entryEl.classList.remove('typing'), 500);
   }
   device.classList.toggle('tall', f.ui.tall);
-  const y = sumEl.offsetTop;
+  const y = sumEl.hidden ? null : sumEl.offsetTop;
   render(); renderProducts(); openStores(f.ui.open); setView(f.ui.view); setPage(f.ui.page, f.ui.pageView);
-  settle(sumEl, y);
+  sumEl.hidden = f.ui.view === 'products';
+  if (y != null) settle(sumEl, y);
   const shop = (f.ui.page ? f.ui.pageView : f.ui.view) === 'products';
   $$('.seg i').forEach((i, k) => i.classList.toggle('on', k === +shop));
   openMenu(f.ui.menu);
